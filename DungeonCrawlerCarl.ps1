@@ -416,10 +416,7 @@ $xaml = @"
                     </Grid>
                     <Border Grid.Row="6" Background="#0A0A0A" BorderBrush="#333" BorderThickness="1"
                             ClipToBounds="True">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                      Background="Transparent">
-                            <Canvas x:Name="MiniMapCanvas" Width="240" Height="190" Background="#0A0A0A"/>
-                        </ScrollViewer>
+                        <Canvas x:Name="MiniMapCanvas" Background="#0A0A0A"/>
                     </Border>
                 </Grid>
             </Border>
@@ -2228,71 +2225,82 @@ function Write-Sep {
 function Update-HUD {
     $g = $script:GS
     if (-not $g) { return }
+
+    # Compute values outside Dispatcher to avoid calling script functions from inside
+    $totalAtk = Get-TotalAttack
+    $totalDef = Get-TotalDefense
+    $totalSpd = Get-TotalSpeed
+    $room     = $script:RoomDB[$g.CurrentRoom]
+    $roomName = if ($room) { $room.Name } else { "---" }
+    $statsStr = "STR $($g.STR)  DEX $($g.DEX)  INT $($g.INT)  CON $($g.CON)  CHA $($g.CHA)  LCK $($g.LCK)"
+    $wpnText  = if ($g.EquippedWeapon) {
+        $wi = $script:ItemDB[$g.EquippedWeapon]
+        "Weapon: $(if ($wi) { $wi.Name } else { '?' })"
+    } else { "Weapon: Bare Hands" }
+    $armText  = if ($g.EquippedArmor) {
+        $ai = $script:ItemDB[$g.EquippedArmor]
+        "Armor: $(if ($ai) { $ai.Name } else { '?' })"
+    } else { "Armor: Street Clothes" }
+    $enemyName = if ($g.InCombat -and $g.CurrentEnemy) {
+        $edef = $script:EnemyDB[$g.CurrentEnemy]
+        if ($edef) { $edef.Name } else { $g.CurrentEnemy }
+    } else { "" }
+
     $script:Window.Dispatcher.Invoke([Action]{
-        # Stat labels
-        $map = @{
-            "lblHP"     = "$($g.HP)/$($g.MaxHP)"
-            "lblMP"     = "$($g.MP)/$($g.MaxMP)"
-            "lblSTR"    = "$($g.STR)"
-            "lblDEX"    = "$($g.DEX)"
-            "lblINT"    = "$($g.INT)"
-            "lblCON"    = "$($g.CON)"
-            "lblCHA"    = "$($g.CHA)"
-            "lblLCK"    = "$($g.LCK)"
-            "lblGold"   = "$($g.Gold)g"
-            "lblFloor"  = "Floor $($g.Floor)"
-            "lblLevel"  = "Lv.$($g.Level)"
-            "lblEXP"    = "$($g.EXP)/$($g.EXPNext)"
-            "lblViewers"= "$($g.Viewers)"
-            "lblLootBoxCount" = "x$($g.LootBoxes)"
+        # TextBlock .Text updates (all HUD labels are TextBlocks, not Labels)
+        $txt = @{
+            "TxtHP"      = "$($g.HP) / $($g.MaxHP)"
+            "TxtMP"      = "$($g.MP) / $($g.MaxMP)"
+            "TxtXP"      = "$($g.EXP) / $($g.EXPNext) XP"
+            "TxtGold"    = "Gold: $($g.Gold)g"
+            "TxtFloor"   = "Floor: $($g.Floor)"
+            "TxtLevel"   = "Level: $($g.Level)"
+            "TxtViewers" = "Viewers: $($g.Viewers)"
+            "TxtKills"   = "Kills: $($g.Kills)"
+            "TxtAtk"     = "ATK: $totalAtk"
+            "TxtDef"     = "DEF: $totalDef"
+            "TxtSpd"     = "SPD: $totalSpd"
+            "TxtStats"   = $statsStr
+            "TxtName"    = "Name: $($g.Name)"
+            "TxtRace"    = "Race: $($g.Race)"
+            "TxtClass"   = "Class: $($g.Class)"
+            "TxtLocation"= $roomName
+            "TxtWeapon"  = $wpnText
+            "TxtArmor"   = $armText
         }
-        foreach ($k in $map.Keys) {
+        foreach ($k in $txt.Keys) {
             $el = $script:Window.FindName($k)
-            if ($el) { $el.Content = $map[$k] }
+            if ($el) { $el.Text = $txt[$k] }
         }
         # Progress bars
-        $pbHP = $script:Window.FindName("pbHP")
-        if ($pbHP -and $g.MaxHP -gt 0) { $pbHP.Value = [Math]::Round(($g.HP / $g.MaxHP) * 100) }
-        $pbMP = $script:Window.FindName("pbMP")
-        if ($pbMP -and $g.MaxMP -gt 0) { $pbMP.Value = [Math]::Round(($g.MP / $g.MaxMP) * 100) }
-        $pbEXP = $script:Window.FindName("pbEXP")
-        if ($pbEXP -and $g.EXPNext -gt 0) { $pbEXP.Value = [Math]::Round(($g.EXP / $g.EXPNext) * 100) }
-        $pbEnemy = $script:Window.FindName("pbEnemy")
-        if ($pbEnemy) {
-            if ($g.InCombat -and $g.EnemyMaxHP -gt 0) {
-                $pbEnemy.Value = [Math]::Round(($g.EnemyHP / $g.EnemyMaxHP) * 100)
-                $pbEnemy.Visibility = "Visible"
-            } else {
-                $pbEnemy.Visibility = "Collapsed"
-            }
-        }
-        # Room name
-        $room = $script:RoomDB[$g.CurrentRoom]
-        $lblRoom = $script:Window.FindName("lblRoom")
-        if ($lblRoom -and $room) { $lblRoom.Content = $room.Name }
+        $barHP = $script:Window.FindName("BarHP")
+        if ($barHP -and $g.MaxHP -gt 0) { $barHP.Value = [Math]::Round(($g.HP / $g.MaxHP) * 100) }
+        $barMP = $script:Window.FindName("BarMP")
+        if ($barMP -and $g.MaxMP -gt 0) { $barMP.Value = [Math]::Round(($g.MP / $g.MaxMP) * 100) }
+        $barXP = $script:Window.FindName("BarXP")
+        if ($barXP -and $g.EXPNext -gt 0) { $barXP.Value = [Math]::Round(($g.EXP / $g.EXPNext) * 100) }
         # Inventory list
-        $lst = $script:Window.FindName("lstInventory")
+        $lst = $script:Window.FindName("LstInventory")
         if ($lst) {
             $lst.Items.Clear()
             foreach ($id in $g.Inventory) {
                 $item = $script:ItemDB[$id]
-                $name = if ($item) { $item.Name } else { $id }
-                [void]$lst.Items.Add($name)
+                $iname = if ($item) { $item.Name } else { $id }
+                [void]$lst.Items.Add($iname)
             }
         }
-        # Equipment slots
-        $slots = @{
-            "lblWeapon"    = if ($g.EquippedWeapon)    { $script:ItemDB[$g.EquippedWeapon].Name }    else { "--" }
-            "lblArmor"     = if ($g.EquippedArmor)     { $script:ItemDB[$g.EquippedArmor].Name }     else { "--" }
-            "lblAccessory" = if ($g.EquippedAccessory) { $script:ItemDB[$g.EquippedAccessory].Name } else { "--" }
+        # Combat panel visibility
+        $combatBorder = $script:Window.FindName("combatBar")
+        if ($combatBorder) {
+            $combatBorder.Visibility = if ($g.InCombat) { "Visible" } else { "Collapsed" }
         }
-        foreach ($k in $slots.Keys) {
-            $el = $script:Window.FindName($k)
-            if ($el) { $el.Content = $slots[$k] }
+        # Enemy info text (TextBlocks inside combatBar)
+        if ($g.InCombat) {
+            $lblE = $script:Window.FindName("lblEnemy")
+            if ($lblE) { $lblE.Text = $enemyName }
+            $lblEHP = $script:Window.FindName("lblEnemyHP")
+            if ($lblEHP) { $lblEHP.Text = "HP: $($g.EnemyHP) / $($g.EnemyMaxHP)" }
         }
-        # Combat visibility
-        $combatPanel = $script:Window.FindName("combatPanel")
-        if ($combatPanel) { $combatPanel.Visibility = if ($g.InCombat) { "Visible" } else { "Collapsed" } }
     })
     Update-AchieveBadge
 }
@@ -3082,7 +3090,7 @@ function Invoke-UseItem {
 }
 
 function Do-UseItemSelected {
-    $lst = $script:Window.FindName("lstInventory")
+    $lst = $script:Window.FindName("LstInventory")
     if (-not $lst -or $lst.SelectedIndex -lt 0) { Write-Warn "Select an item first."; return }
     $idx = $lst.SelectedIndex
     if ($idx -ge $script:GS.Inventory.Count) { return }
@@ -3960,7 +3968,7 @@ function Start-NewGame {
     }
     # Begin game
     $script:Window.Dispatcher.Invoke([Action]{
-        $rtb = $script:Window.FindName("rtbOutput")
+        $rtb = $script:Window.FindName("TxtTerminal")
         if ($rtb) { $rtb.Document.Blocks.Clear() }
     })
     Write-System $script:FloorData[1].Intro
@@ -3986,7 +3994,7 @@ try {
 }
 
 # ---- Element references ----
-$script:UI_Terminal = $script:Window.FindName("rtbOutput")
+$script:UI_Terminal = $script:Window.FindName("TxtTerminal")
 
 # ---- Macro: wire a nav button to a direction ----
 function Wire-NavBtn {
