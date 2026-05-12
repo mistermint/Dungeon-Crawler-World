@@ -2359,12 +2359,11 @@ function Check-Achievement {
     if ($script:GS.Achievements[$Id]) { return }
     $def = $script:AchievementDB[$Id]
     if (-not $def) { return }
-    $statVal = 0
-    if ($def.Threshold -and $def.Stat) {
-        $statKey = "AchieveStat_$($def.Stat)"
-        $statVal = $script:GS[$statKey]
-        if ($statVal -lt $def.Threshold) { return }
-    }
+    # Achievements without a Stat+Threshold must be granted manually via Grant-Achievement
+    if (-not ($def.Threshold -and $def.Stat)) { return }
+    $statKey = "AchieveStat_$($def.Stat)"
+    $statVal = $script:GS[$statKey]
+    if ($statVal -lt $def.Threshold) { return }
     Grant-Achievement $Id
 }
 
@@ -2522,11 +2521,7 @@ function Enter-Room {
     $exitList = ($room.Exits.Keys | ForEach-Object { "$_ -> $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
     Write-Info "Exits: $exitList"
 
-    # Items in room
-    if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
-        Write-Loot "Items here: $($itemNames -join ', ')"
-    }
+    # Items are hidden until searched
 
     # Enemies
     $enemies = Get-RoomEnemies $RoomId
@@ -3112,11 +3107,13 @@ function Do-Look {
     # Exits
     $exitList = ($room.Exits.Keys | ForEach-Object { "$_ -> $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
     Write-Info "Exits: $exitList"
-    # Items
-    if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
-        Write-Loot "On the ground: $($itemNames -join ', ')"
-    } else { Write-Info "No items visible." }
+    # Items — only visible after SEARCH
+    if ($room.Searched) {
+        if ($room.Items -and $room.Items.Count -gt 0) {
+            $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
+            Write-Loot "On the ground: $($itemNames -join ', ')"
+        } else { Write-Info "Nothing on the ground." }
+    } else { Write-Info "Area unsearched. Use SEARCH to look for items." }
     # Enemies
     $enemies = Get-RoomEnemies $g.CurrentRoom
     if ($enemies.Count -gt 0) {
@@ -3180,6 +3177,7 @@ function Do-Rest {
 function Do-TakeAll {
     $g = $script:GS
     $room = $script:RoomDB[$g.CurrentRoom]
+    if (-not $room.Searched) { Write-Warn "Search the room first before you can pick things up."; return }
     if (-not $room.Items -or $room.Items.Count -eq 0) { Write-Info "Nothing on the ground."; return }
     foreach ($id in $room.Items) {
         $item = $script:ItemDB[$id]
@@ -3193,23 +3191,36 @@ function Do-TakeAll {
 function Do-Search {
     $g = $script:GS
     $room = $script:RoomDB[$g.CurrentRoom]
+
+    # Mark searched so Do-Look and Do-TakeAll can see items
+    $room.Searched = $true
+
+    # Reveal any items the room designer placed here
+    if ($room.Items -and $room.Items.Count -gt 0) {
+        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
+        Write-Loot "You find: $($itemNames -join ', ')"
+    }
+
+    # Random search bonus (gold / loot box)
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.LCK
     if ($roll -ge 14) {
         $gold = Get-Random -Minimum 3 -Maximum 16
         $g.Gold += $gold
-        Write-Loot "You find $gold gold hidden in the debris."
+        Write-Loot "You also find $gold gold hidden in the debris."
         if ((Get-Random -Minimum 1 -Maximum 101) -le 20) {
             $g.LootBoxes++
             Write-Loot "And a loot box tucked behind something."
         }
     } else {
-        $msgs = @(
-            "Nothing. Just dust and regret.",
-            "You find a used protein bar wrapper. Not useful.",
-            "The floor reveals its secrets: it's also a floor.",
-            "Whatever was here, it's long gone."
-        )
-        Write-Info $msgs[(Get-Random -Minimum 0 -Maximum $msgs.Count)]
+        if (-not ($room.Items -and $room.Items.Count -gt 0)) {
+            $msgs = @(
+                "Nothing. Just dust and regret.",
+                "You find a used protein bar wrapper. Not useful.",
+                "The floor reveals its secrets: it's also a floor.",
+                "Whatever was here, it's long gone."
+            )
+            Write-Info $msgs[(Get-Random -Minimum 0 -Maximum $msgs.Count)]
+        }
     }
     Update-HUD
 }
@@ -4001,7 +4012,9 @@ function Wire-NavBtn {
     param([string]$BtnName, [string]$Direction)
     $btn = $script:Window.FindName($BtnName)
     if (-not $btn) { return }
-    $btn.Add_Click({ Do-Move $Direction })
+    # Use Create to bake $Direction into the scriptblock text; closure capture would
+    # capture the variable reference and all buttons would share the last assigned value
+    $btn.Add_Click([ScriptBlock]::Create("Do-Move '$Direction'"))
 }
 Wire-NavBtn "btnNavN"  "north"
 Wire-NavBtn "btnNavS"  "south"
