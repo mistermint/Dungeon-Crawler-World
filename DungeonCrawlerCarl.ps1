@@ -157,7 +157,7 @@ $xaml = @"
                         <TextBlock x:Name="TxtHP" Style="{StaticResource SDim}" Text="100 / 100" HorizontalAlignment="Right"/>
 
                         <TextBlock Style="{StaticResource SHdr}" Text="MANA (MP)"/>
-                        <ProgressBar x:Name="BarMP" Height="14" Minimum="0" Maximum="10" Value="10"
+                        <ProgressBar x:Name="BarMP" Height="14" Minimum="0" Maximum="100" Value="100"
                                      Background="#2C2C2E" Foreground="#0A84FF" Margin="0,2,0,2"/>
                         <TextBlock x:Name="TxtMP" Style="{StaticResource SDim}" Text="10 / 10" HorizontalAlignment="Right"/>
 
@@ -577,25 +577,51 @@ $script:MordecaiDialogue = @{
 # ACHIEVEMENT DATABASE
 # ============================================================
 $script:AchievementDB = @{
-    "first_blood"     = @{ Name="First Blood";               Desc="Kill your first enemy.";                              ViewerBonus=5000;   BoxReward="iron" }
-    "goblin_hoover"   = @{ Name="Goblin Hoover";             Desc="Kill 10 exploding goblins.";                         ViewerBonus=25000;  BoxReward="bronze"; Threshold=10; Stat="goblin_kills" }
-    "pacifist"        = @{ Name="Reluctant Pacifist";        Desc="Flee from 5 fights.";                                ViewerBonus=8000;   BoxReward="iron";   Threshold=5;  Stat="flee_count" }
-    "hoarder"         = @{ Name="Hoarder";                   Desc="Carry 15 or more items.";                            ViewerBonus=10000;  BoxReward="bronze" }
-    "box_addict"      = @{ Name="Loot Goblin";               Desc="Open 10 loot boxes.";                                ViewerBonus=30000;  BoxReward="silver"; Threshold=10; Stat="boxes_opened" }
-    "floor2_clear"    = @{ Name="Tutorial Dropout";          Desc="Complete Floor 2.";                                  ViewerBonus=50000;  BoxReward="silver" }
-    "selection_gate"  = @{ Name="Evolutionary Milestone";   Desc="Enter the Selection Gate on Floor 3.";               ViewerBonus=100000; BoxReward="gold" }
-    "boss_slayer"     = @{ Name="Boss Slayer";               Desc="Defeat your first floor boss.";                      ViewerBonus=75000;  BoxReward="gold" }
-    "five_bosses"     = @{ Name="Apex Predator";             Desc="Defeat 5 bosses.";                                   ViewerBonus=200000; BoxReward="platinum"; Threshold=5; Stat="boss_kills" }
-    "jug_o_boom"      = @{ Name="Carl's Heir";               Desc="Craft and use Carl's Jug O' Boom.";                 ViewerBonus=50000;  BoxReward="gold" }
-    "floor5_banners"  = @{ Name="Castle Collector";          Desc="Capture all 4 castles on Floor 5.";                 ViewerBonus=150000; BoxReward="platinum" }
-    "survive_hunting" = @{ Name="The Prey That Fights Back"; Desc="Reach Floor 7 after surviving the Hunting Grounds."; ViewerBonus=250000; BoxReward="platinum" }
-    "subscriber_1m"   = @{ Name="One Million";               Desc="Reach 1,000,000 viewers.";                           ViewerBonus=0;      BoxReward="celestial" }
-    "floor10_entry"   = @{ Name="Endgame";                   Desc="Reach Floor 10.";                                    ViewerBonus=500000; BoxReward="celestial" }
-    "boring_crawler"  = @{ Name="Most Boring Crawler";       Desc="Let your viewers drop below 50.";                   ViewerBonus=2000;   BoxReward="iron" }
-    "crafting_nerd"   = @{ Name="Crafting Enthusiast";       Desc="Craft 3 different items.";                           ViewerBonus=15000;  BoxReward="bronze"; Threshold=3; Stat="crafts_made" }
-    "smooth_talker"   = @{ Name="Smooth Talker";             Desc="Successfully talk your way out of 3 fights.";        ViewerBonus=20000;  BoxReward="bronze"; Threshold=3; Stat="talk_escapes" }
-    "explorer"        = @{ Name="Thorough";                  Desc="Interact with 10 environment objects.";              ViewerBonus=12000;  BoxReward="iron";   Threshold=10; Stat="interact_count" }
-    "mordecai_fan"    = @{ Name="Actually Listening";        Desc="Speak with Mordecai on 5 different floors.";         ViewerBonus=18000;  BoxReward="bronze"; Threshold=5; Stat="mordecai_talks" }
+    # COMBAT
+    "first_blood"      = @{ Name="First Blood";               Desc="Kill your first enemy.";                               ViewerBonus=5000;   BoxReward="iron" }
+    "kill_10"          = @{ Name="Dungeon Regular";            Desc="Kill 10 enemies.";                                     ViewerBonus=10000;  BoxReward="iron";      Threshold=10;    Stat="Kills" }
+    "kill_50"          = @{ Name="Monster Problem Solver";     Desc="Kill 50 enemies.";                                     ViewerBonus=40000;  BoxReward="bronze";    Threshold=50;    Stat="Kills" }
+    "kill_100"         = @{ Name="Carnage Artisan";            Desc="Kill 100 enemies.";                                    ViewerBonus=100000; BoxReward="silver";    Threshold=100;   Stat="Kills" }
+    "boss_slayer"      = @{ Name="Boss Slayer";                Desc="Defeat your first floor boss.";                        ViewerBonus=75000;  BoxReward="gold" }
+    "five_bosses"      = @{ Name="Apex Predator";              Desc="Defeat 5 bosses.";                                     ViewerBonus=200000; BoxReward="platinum";  Threshold=5;     Stat="boss_kills" }
+    "goblin_hoover"    = @{ Name="Goblin Hoover";              Desc="Kill 10 exploding goblins.";                           ViewerBonus=25000;  BoxReward="bronze";    Threshold=10;    Stat="goblin_kills" }
+    "survive_low_hp"   = @{ Name="On the Edge";                Desc="Survive a hit that left you at 5 HP or less.";         ViewerBonus=20000;  BoxReward="iron" }
+    "pacifist"         = @{ Name="Reluctant Pacifist";         Desc="Flee from 5 fights.";                                  ViewerBonus=8000;   BoxReward="iron";      Threshold=5;     Stat="flee_count" }
+    "ghost"            = @{ Name="You Never Saw Me";           Desc="Successfully hide 5 times in combat.";                 ViewerBonus=12000;  BoxReward="iron";      Threshold=5;     Stat="stealth_count" }
+    # EXPLORATION
+    "explorer10"       = @{ Name="Getting a Feel For It";      Desc="Visit 10 rooms.";                                      ViewerBonus=5000;   BoxReward="iron";      Threshold=10;    Stat="RoomsVisited" }
+    "explorer25"       = @{ Name="Dungeon Tourist";            Desc="Visit 25 rooms.";                                      ViewerBonus=15000;  BoxReward="bronze";    Threshold=25;    Stat="RoomsVisited" }
+    "explorer50"       = @{ Name="Thorough";                   Desc="Visit 50 rooms.";                                      ViewerBonus=40000;  BoxReward="silver";    Threshold=50;    Stat="RoomsVisited" }
+    "searcher"         = @{ Name="Leave No Stone Unturned";    Desc="Search 10 rooms.";                                     ViewerBonus=10000;  BoxReward="iron";      Threshold=10;    Stat="rooms_searched" }
+    "interact10"       = @{ Name="Actually Looking";           Desc="Interact with 10 environment objects.";                ViewerBonus=12000;  BoxReward="iron";      Threshold=10;    Stat="interact_count" }
+    "find_stairwell"   = @{ Name="Way Down";                   Desc="Discover the first stairwell.";                        ViewerBonus=10000;  BoxReward="iron" }
+    "floor2_clear"     = @{ Name="Tutorial Dropout";           Desc="Complete Floor 2.";                                    ViewerBonus=50000;  BoxReward="silver" }
+    "selection_gate"   = @{ Name="Evolutionary Milestone";     Desc="Enter the Selection Gate on Floor 3.";                 ViewerBonus=100000; BoxReward="gold" }
+    "floor5_banners"   = @{ Name="Castle Collector";           Desc="Capture all 4 castles on Floor 5.";                   ViewerBonus=150000; BoxReward="platinum" }
+    "survive_hunting"  = @{ Name="The Prey That Fights Back";  Desc="Reach Floor 7 after surviving the Hunting Grounds.";  ViewerBonus=250000; BoxReward="platinum" }
+    "floor10_entry"    = @{ Name="Endgame";                    Desc="Reach Floor 10.";                                      ViewerBonus=500000; BoxReward="celestial" }
+    # ITEMS & CRAFTING
+    "hoarder"          = @{ Name="Hoarder";                    Desc="Carry 15 or more items at once.";                      ViewerBonus=10000;  BoxReward="bronze" }
+    "first_equip"      = @{ Name="Gearing Up";                 Desc="Equip your first weapon or armor.";                   ViewerBonus=3000;   BoxReward="iron" }
+    "first_box"        = @{ Name="Mystery Acquired";           Desc="Open your first loot box.";                            ViewerBonus=5000;   BoxReward="iron" }
+    "box_addict"       = @{ Name="Loot Goblin";                Desc="Open 10 loot boxes.";                                  ViewerBonus=30000;  BoxReward="silver";    Threshold=10;    Stat="boxes_opened" }
+    "first_craft"      = @{ Name="MacGyver Mode";              Desc="Craft your first item.";                               ViewerBonus=8000;   BoxReward="iron" }
+    "crafting_nerd"    = @{ Name="Crafting Enthusiast";        Desc="Craft 3 items.";                                       ViewerBonus=15000;  BoxReward="bronze";    Threshold=3;     Stat="items_crafted" }
+    "jug_o_boom"       = @{ Name="Carl's Heir";                Desc="Craft and use Carl's Jug O' Boom.";                   ViewerBonus=50000;  BoxReward="gold" }
+    "rich"             = @{ Name="Comfortable";                Desc="Accumulate 200 gold.";                                 ViewerBonus=20000;  BoxReward="bronze";    Threshold=200;   Stat="Gold" }
+    # SOCIAL / DIALOGUE
+    "smooth_talker"    = @{ Name="Smooth Talker";              Desc="Successfully talk your way out of 3 fights.";          ViewerBonus=20000;  BoxReward="bronze";    Threshold=3;     Stat="talk_escapes" }
+    "mordecai_fan"     = @{ Name="Actually Listening";         Desc="Speak with Mordecai on 5 different floors.";           ViewerBonus=18000;  BoxReward="bronze";    Threshold=5;     Stat="mordecai_talks" }
+    "helped_britta"    = @{ Name="Basic Decency";              Desc="Help Britta Sorensen with her injury.";                ViewerBonus=15000;  BoxReward="bronze" }
+    # VIEWERS
+    "boring_crawler"   = @{ Name="Most Boring Crawler";        Desc="Let your viewers drop below 50.";                      ViewerBonus=2000;   BoxReward="iron" }
+    "viewers_1k"       = @{ Name="You Have Fans";              Desc="Reach 1,000 viewers.";                                 ViewerBonus=5000;   BoxReward="iron";      Threshold=1000;   Stat="ViewerPeak" }
+    "viewers_10k"      = @{ Name="Minor Celebrity";            Desc="Reach 10,000 viewers.";                                ViewerBonus=15000;  BoxReward="bronze";    Threshold=10000;  Stat="ViewerPeak" }
+    "viewers_100k"     = @{ Name="Going Viral";                Desc="Reach 100,000 viewers.";                               ViewerBonus=50000;  BoxReward="silver";    Threshold=100000; Stat="ViewerPeak" }
+    "subscriber_1m"    = @{ Name="One Million";                Desc="Reach 1,000,000 viewers.";                             ViewerBonus=0;      BoxReward="celestial"; Threshold=1000000;Stat="ViewerPeak" }
+    # LEVELING
+    "reach_level5"     = @{ Name="Warming Up";                 Desc="Reach level 5.";                                       ViewerBonus=25000;  BoxReward="bronze" }
+    "reach_level10"    = @{ Name="Seasoned Crawler";           Desc="Reach level 10.";                                      ViewerBonus=75000;  BoxReward="silver" }
 }
 
 # ============================================================
@@ -1236,7 +1262,7 @@ $script:RoomDB = @{
     "f1_tutorial_guild" = @{
         Name="Tutorial Guild Hall - Entry"; Floor=1; Visited=$false; IsSafeRoom=$true; IsTutorial=$true
         Desc="The building materialized out of nothing. One second it wasn't here; the next it was, perfectly intact -- warm stone, good light, and the smell of something that might be bread. A ratkin about four feet tall in a guild vest stands behind a reception desk. His whiskers are twitching. His eyes are very large. His name, a small sign informs you, is MORDECAI. He looks up. He looks like he has been waiting for you. He has, in a sense."
-        Exits=@{south="f1_spawn"}
+        Exits=@{south="f1_spawn";north="f1_guild"}
         Items=@("mordecai_scroll"); Enemies=@()
         Interactables=@{
             "sign"     = @{ Name="Guild Notice Board"; Desc="Covered in laminated notices in seventeen languages. One says: LOOT BOXES: SAFE ROOMS ONLY. Another says: RESTING: SAFE ROOMS ONLY. A third says: MORDECAI IS NOT YOUR ENEMY. A fourth says: YES HE KNOWS ABOUT THE FEET THING."; Outcome="none" }
@@ -1248,7 +1274,7 @@ $script:RoomDB = @{
     "f1_spawn" = @{
         Name="Spawn Point Alpha"; Floor=1; Visited=$false
         Desc="The world ended about three minutes ago. You're standing in what used to be a Seattle neighborhood. The buildings have all sunk into the ground, leaving a rubble-strewn dungeon floor stretching in every direction. Overhead, glowing text hangs in the air: WELCOME, CRAWLER. FIND THE STAIRCASE. A Tutorial Guild Hall is to the north. There's a vending machine area to the east."
-        Exits=@{north="f1_guild";east="f1_vending";south="f1_rubble_south";west="f1_alley"}
+        Exits=@{north="f1_tutorial_guild";east="f1_vending";south="f1_rubble_south";west="f1_alley"}
         Items=@("pipe_wrench","health_potion"); Enemies=@("cave_crawler")
         Interactables=@{
             "rubble"    = @{ Name="Collapsed Concrete"; Desc="Heavy slabs of what used to be a building. Could hide anything."; Outcome="loot"; Item="scrap_metal"; Text="You dig through the rubble and find a length of useful scrap metal." }
@@ -2076,7 +2102,7 @@ function New-GameState {
     $con = $stats["CON"]; $cha = $stats["CHA"]; $lck = $stats["LCK"]
     $maxHP = 80 + ($con * 5); $maxMP = $int
     $script:GS = [ordered]@{
-        PlayerName="$Name"; Floor=1; CurrentRoom="f1_tutorial_guild"
+        PlayerName="$Name"; Floor=1; CurrentRoom="f1_spawn"
         HP=$maxHP; MaxHP=$maxHP; MP=$maxMP; MaxMP=$maxMP
         STR=$str; DEX=$dex; INT=$int; CON=$con; CHA=$cha; LCK=$lck
         EXP=0; EXPNext=100; Level=1; Gold=15
@@ -2093,12 +2119,18 @@ function New-GameState {
         AchieveStat_talk_escapes=0; AchieveStat_interact_count=0; AchieveStat_mordecai_talks=0
         AchieveStat_boss_kills=0; AchieveStat_rooms_explored=0; AchieveStat_gold_spent=0
         AchieveStat_items_crafted=0; AchieveStat_floors_cleared=0
+        AchieveStat_goblin_kills=0; AchieveStat_flee_count=0; AchieveStat_stealth_count=0
+        AchieveStat_rooms_searched=0; AchieveStat_boxes_opened=0
+        KnownSpells=@("bolt")
         StatusEffects=@{}
         GameFlags=@{ RefusedDungeon=$false; BrittaHelped=$false; MordecaiTrusted=$false }
         Turn=1; LastSystemMsg=0
     }
     # Initialize achievement tracking
     foreach ($key in $script:AchievementDB.Keys) { $script:GS.Achievements[$key] = $false }
+    # Starting spells based on INT
+    if ($script:GS.INT -ge 5) { $script:GS.KnownSpells += @("frost_shard") }
+    if ($script:GS.INT -ge 7) { $script:GS.KnownSpells += @("fireball") }
 }
 
 function Recalculate-DerivedStats {
@@ -2366,7 +2398,7 @@ function Check-SponsorDrop {
 # ============================================================
 function Grant-Achievement {
     param([string]$Id)
-    if ($script:GS.Achievements[$Id]) { return }   # already unlocked
+    if ($script:GS.Achievements[$Id] -eq $true) { return }   # already unlocked
     $def = $script:AchievementDB[$Id]
     if (-not $def) { return }
     $script:GS.Achievements[$Id] = $true
@@ -2378,14 +2410,17 @@ function Grant-Achievement {
 
 function Check-Achievement {
     param([string]$Id)
-    if ($script:GS.Achievements[$Id]) { return }
+    if ($script:GS.Achievements[$Id] -eq $true) { return }
     $def = $script:AchievementDB[$Id]
     if (-not $def) { return }
     # Achievements without a Stat+Threshold must be granted manually via Grant-Achievement
     if (-not ($def.Threshold -and $def.Stat)) { return }
+    # Resolve stat: try AchieveStat_ prefix first, then raw GS key
     $statKey = "AchieveStat_$($def.Stat)"
-    $statVal = $script:GS[$statKey]
-    if ($statVal -lt $def.Threshold) { return }
+    $statVal = if ($null -ne $script:GS[$statKey]) { $script:GS[$statKey] } `
+               elseif ($null -ne $script:GS[$def.Stat]) { $script:GS[$def.Stat] } `
+               else { 0 }
+    if ([int]$statVal -lt [int]$def.Threshold) { return }
     Grant-Achievement $Id
 }
 
@@ -2403,9 +2438,9 @@ function Do-Achievements {
     foreach ($ach in $script:GS.PendingAchievements) {
         Write-Loot " * $($ach.Name)"
         Write-Terminal "   $($ach.Desc)" "#A0A0A0"
-        if ($ach.LootBox) {
+        if ($ach.BoxReward) {
             $script:GS.LootBoxes++
-            Write-Loot "   + 1 Loot Box added to your inventory."
+            Write-Loot "   + 1 $($ach.BoxReward) loot box added to your collection."
         }
     }
     $script:GS.PendingAchievements = @()
@@ -3609,10 +3644,12 @@ function Do-Search {
     # Mark searched so Do-Look and Do-TakeAll can see items
     $room.Searched = $true
 
-    # Reveal any items the room designer placed here
+    # Add any room items directly to inventory
     if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
+        $itemNames = @($room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } })
         Write-Loot "You find: $($itemNames -join ', ')"
+        foreach ($id in $room.Items) { $g.Inventory += @($id) }
+        $room.Items = @()
     }
 
     # Random search bonus (gold / loot box)
@@ -4128,16 +4165,16 @@ function Show-InventoryWindow {
 
       <!-- Title bar -->
       <Border x:Name="invDragBar" Grid.Row="0" Background="#111115" Padding="16,10" Cursor="SizeAll">
-        <DockPanel>
-          <TextBlock Text="INVENTORY" Foreground="#E8E8E8" FontFamily="Consolas"
-                     FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock x:Name="lblInvGold" Text="" Foreground="#FFCC00" FontFamily="Consolas"
-                     FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
-          <TextBlock x:Name="lblInvBoxes" Text="" Foreground="#BF5AF2" FontFamily="Consolas"
-                     FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
+        <DockPanel LastChildFill="True">
           <Button x:Name="btnInvClose" Content="X  CLOSE" DockPanel.Dock="Right"
                   Background="#2A0808" Foreground="#FF453A" BorderBrush="#FF3B30"
-                  Padding="12,6" FontSize="11"/>
+                  Padding="10,5" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+          <TextBlock Text="INVENTORY" Foreground="#E8E8E8" FontFamily="Consolas"
+                     FontSize="14" FontWeight="Bold" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+          <TextBlock x:Name="lblInvGold" Text="" Foreground="#FFCC00" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0" DockPanel.Dock="Left"/>
+          <TextBlock x:Name="lblInvBoxes" Text="" Foreground="#BF5AF2" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </DockPanel>
       </Border>
 
