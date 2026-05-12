@@ -2185,24 +2185,46 @@ function Write-AISarcasm {
     Write-Terminal "[AI]: $msg" "#FF6B6B"
 }
 
+$script:CombatLogRTB      = $null
+$script:CombatWinControls = $null
+$script:CombatWindowRef   = $null
+$script:CombatStartLevel  = 1
+
+function Append-CombatLog {
+    param([string]$Text, [string]$Color="#E8E8E8")
+    $rtb = $script:CombatLogRTB
+    if (-not $rtb) { return }
+    $para = New-Object System.Windows.Documents.Paragraph
+    $run  = New-Object System.Windows.Documents.Run $Text
+    try { $run.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($Color) } catch {}
+    $para.Inlines.Add($run)
+    $para.Margin = New-Object System.Windows.Thickness(0,0,0,1)
+    $rtb.Document.Blocks.Add($para)
+    $rtb.ScrollToEnd()
+}
+
 function Write-Combat {
     param([string]$Text)
     Write-Terminal $Text "#FF453A"
+    Append-CombatLog $Text "#FF6B60"
 }
 
 function Write-Loot {
     param([string]$Text)
     Write-Terminal $Text "#30D158"
+    if ($script:GS -and $script:GS.InCombat) { Append-CombatLog $Text "#30D158" }
 }
 
 function Write-Info {
     param([string]$Text)
     Write-Terminal $Text "#64D2FF"
+    if ($script:GS -and $script:GS.InCombat) { Append-CombatLog $Text "#64D2FF" }
 }
 
 function Write-Warn {
     param([string]$Text)
     Write-Terminal $Text "#FFD60A"
+    if ($script:GS -and $script:GS.InCombat) { Append-CombatLog $Text "#FFD60A" }
 }
 
 function Write-Mordecai {
@@ -2561,19 +2583,19 @@ function Start-Combat {
 
     $g.InCombat = $true
     $g.CurrentEnemy = $EnemyId
-    # Scale enemy HP slightly by floor
-    $baseHP = $edef.HP + ($g.Floor * 2)
+    $baseHP = (if ($edef.MaxHP) { $edef.MaxHP } else { 20 }) + ($g.Floor * 2)
     $g.EnemyHP = $baseHP; $g.EnemyMaxHP = $baseHP
     $g.CombatRound = 1
     $g.PlayerHiding = $false
     $g.DistractActive = $false
+    $script:CombatStartLevel = $g.Level
 
     Write-Sep
-    Write-Combat "=== COMBAT STARTED ==="
-    Write-Combat "$($edef.Name) appears! HP: $($g.EnemyHP)"
-    if ($edef.CanTalk) { Write-Info "(This enemy can talk. Type TALK to attempt dialogue.)" }
-    Write-Info "Actions: ATTACK | SPELL | FLEE | ITEM" + $(if ($edef.CanTalk) { " | TALK" } else { "" })
-    Update-HUD
+    Write-Combat "$($edef.Name) appears!"
+    if ($edef.Special) { Write-Info "Warning: $($edef.Name) has a special ability -- $($edef.Special)!" }
+    if ($edef.CanTalk) { Write-Info "(This enemy can talk. TALK to attempt dialogue.)" }
+
+    Show-CombatWindow $EnemyId
 }
 
 function Do-Attack {
@@ -2582,9 +2604,10 @@ function Do-Attack {
     $edef = $script:EnemyDB[$g.CurrentEnemy]
     $playerAtk = Get-TotalAttack
     $roll = Get-Random -Minimum 1 -Maximum 7
-    $dmg = [Math]::Max(1, $playerAtk + $roll - (Get-TotalDefense) + (Get-Random -Minimum -2 -Maximum 3))
+    $enemyDef = if ($edef.Defense) { $edef.Defense } else { 0 }
+    $dmg = [Math]::Max(1, $playerAtk + $roll - $enemyDef + (Get-Random -Minimum -1 -Maximum 2))
     $g.EnemyHP -= $dmg
-    Write-Combat "You attack $($edef.Name) for $dmg damage! ($($g.EnemyHP)/$($g.EnemyMaxHP) HP left)"
+    Write-Combat "You attack $($edef.Name) for $dmg damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
     if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
     Enemy-Attack
 }
@@ -2592,16 +2615,16 @@ function Do-Attack {
 function Do-CastSpell {
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "Not in combat."; return }
-    if ($g.MP -lt 2) { Write-Warn "Not enough MP! (need 2)"; return }
+    if ($g.MP -lt 2) { Write-Warn "Not enough MP! (need 2 MP)"; return }
     $edef = $script:EnemyDB[$g.CurrentEnemy]
     $g.MP -= 2
     $roll = Get-Random -Minimum 1 -Maximum 7
-    $dmg = ($g.INT * 2) + $roll
+    $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
+    $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
     $g.EnemyHP -= $dmg
-    Write-Combat "Spell! You blast $($edef.Name) for $dmg magic damage! MP: $($g.MP)/$($g.MaxMP)"
+    Write-Combat "Spell! You blast $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
     if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
     Enemy-Attack
-    Update-HUD
 }
 
 function Enemy-Attack {
@@ -2632,7 +2655,8 @@ function Enemy-Attack {
         }
     }
 
-    $eDmg = [Math]::Max(0, $edef.ATK + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense))
+    $eAtk  = if ($edef.Attack)  { $edef.Attack  } else { 3 }
+    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense))
     $g.HP -= $eDmg
     Write-Combat "$($edef.Name) hits you for $eDmg damage! HP: $($g.HP)/$($g.MaxHP)"
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
@@ -2649,7 +2673,7 @@ function Do-Taunt {
     # Taunt increases enemy aggression - slight damage boost to them, but enemy focuses ONLY you
     Write-Combat "You taunt $($edef.Name)! They focus entirely on you. Dangerous."
     # Enemy immediately attacks in rage
-    $eDmg = [Math]::Max(1, $edef.ATK + (Get-Random -Minimum 1 -Maximum 5) - (Get-TotalDefense))
+    $eDmg = [Math]::Max(1, (if ($edef.Attack){$edef.Attack}else{3}) + (Get-Random -Minimum 1 -Maximum 5) - (Get-TotalDefense))
     $g.HP -= $eDmg
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
     Write-Combat "Enraged, $($edef.Name) hits you for $eDmg! HP: $($g.HP)/$($g.MaxHP)"
@@ -2695,12 +2719,14 @@ function Do-Flee {
 function Resolve-CombatVictory {
     $g = $script:GS
     $edef = $script:EnemyDB[$g.CurrentEnemy]
-    $expGain = $edef.EXP + (Get-Random -Minimum 0 -Maximum 11)
-    $goldGain = $edef.Gold + (Get-Random -Minimum 0 -Maximum 6)
+    $expGain  = (if ($edef.XP)   { $edef.XP }   else { 10 }) + (Get-Random -Minimum 0 -Maximum 11)
+    $goldBase = if ($edef.Gold -is [array]) { Get-Random -Minimum $edef.Gold[0] -Maximum ($edef.Gold[1]+1) } else { if($edef.Gold){$edef.Gold}else{3} }
+    $goldGain = $goldBase + (Get-Random -Minimum 0 -Maximum 6)
     $g.EXP += $expGain; $g.Gold += $goldGain; $g.Kills++
     $g.AchieveStat_boss_kills += if ($edef.IsBoss) { 1 } else { 0 }
+    $script:CombatSummaryText = "$($edef.Name) defeated!`n+$expGain EXP   +$goldGain gold"
     Write-Loot "=== VICTORY! ==="
-    Write-Loot "$($edef.Name) defeated! +$expGain EXP, +$goldGain gold"
+    Write-Loot "$($edef.Name) defeated!  +$expGain EXP  +$goldGain gold"
     # Drop items
     if ($edef.Drops -and $edef.Drops.Count -gt 0) {
         foreach ($drop in $edef.Drops) {
@@ -2769,6 +2795,394 @@ function Trigger-Victory {
     Write-System "Final report: $($script:GS.Level) levels | $($script:GS.Kills) kills | $($script:GS.RoomsVisited) rooms | $($script:GS.ViewerPeak) peak viewers"
 }
 
+
+# ============================================================
+# COMBAT WINDOW (FF-style popup)
+# ============================================================
+function Update-CombatWindow {
+    $ctrl = $script:CombatWinControls
+    if (-not $ctrl) { return }
+    $g    = $script:GS
+    $edef = if ($g.CurrentEnemy) { $script:EnemyDB[$g.CurrentEnemy] } else { $null }
+
+    if ($edef -and $g.EnemyMaxHP -gt 0) {
+        $ctrl.lblCEnemyHP.Text  = "$($g.EnemyHP) / $($g.EnemyMaxHP)"
+        $ctrl.barCEnemyHP.Value = [Math]::Max(0,[Math]::Round(($g.EnemyHP/$g.EnemyMaxHP)*100))
+        $ctrl.lblCEnemyDef.Text = "DEF: $(if($edef.Defense){$edef.Defense}else{0})"
+    }
+    if ($g.MaxHP -gt 0) {
+        $ctrl.lblCPlayerHP.Text  = "$($g.HP) / $($g.MaxHP)"
+        $ctrl.barCPlayerHP.Value = [Math]::Max(0,[Math]::Round(($g.HP/$g.MaxHP)*100))
+    }
+    if ($g.MaxMP -gt 0) {
+        $ctrl.lblCPlayerMP.Text  = "$($g.MP) / $($g.MaxMP)"
+        $ctrl.barCPlayerMP.Value = [Math]::Max(0,[Math]::Round(($g.MP/$g.MaxMP)*100))
+    }
+    $ctrl.lblCRound.Text  = "Round $($g.CombatRound)"
+    $statusParts = @()
+    if ($g.PlayerHiding)   { $statusParts += "HIDDEN" }
+    if ($g.DistractActive) { $statusParts += "DISTRACTED" }
+    $ctrl.lblCStatus.Text = $statusParts -join "  |  "
+
+    $ctrl.btnCSpell.IsEnabled    = ($g.MP -ge 2)
+    $ctrl.btnCSpell.Content      = "SPELL  (2 MP)"
+    $hasConsumables = @($g.Inventory | Where-Object { $i=$script:ItemDB[$_]; $i -and $i.Type -eq "consumable" })
+    $ctrl.btnCItem.IsEnabled     = ($hasConsumables.Count -gt 0)
+    $ctrl.btnCHide.IsEnabled     = (-not $g.PlayerHiding)
+    $ctrl.btnCDistract.IsEnabled = (-not $g.DistractActive)
+}
+
+function Show-CombatEndScreen {
+    $ctrl = $script:CombatWinControls
+    if (-not $ctrl) { return }
+    $g = $script:GS
+    $conv = [System.Windows.Media.BrushConverter]::new()
+    if ($g.HP -le 0) {
+        $ctrl.lblCEndTitle.Text       = "YOU DIED"
+        $ctrl.lblCEndTitle.Foreground = $conv.ConvertFromString("#FF3B30")
+        $ctrl.lblCEndRewards.Text     = "The dungeon has claimed another one.`n$($g.PlayerName) has been added to the memorial archive."
+        $ctrl.lblCEndLevel.Text       = "Floor $($g.Floor)  |  Level $($g.Level)  |  Kills: $($g.Kills)"
+    } else {
+        $ctrl.lblCEndTitle.Text       = "VICTORY!"
+        $ctrl.lblCEndTitle.Foreground = $conv.ConvertFromString("#FFD60A")
+        $ctrl.lblCEndRewards.Text     = $script:CombatSummaryText
+        if ($g.Level -gt $script:CombatStartLevel) {
+            $ctrl.lblCEndLevel.Text = "LEVEL UP!  Now Level $($g.Level)"
+            $ctrl.lblCEndLevel.Foreground = $conv.ConvertFromString("#30D158")
+        } else { $ctrl.lblCEndLevel.Text = "" }
+    }
+    $ctrl.panelEnd.Visibility = "Visible"
+}
+
+function Show-CombatItemPicker {
+    param([string[]]$ItemIds, [object]$OwnerWin)
+    $pickerXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Use Item" Width="320" Height="300"
+        WindowStyle="None" Background="#1A1A1E"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <Border BorderBrush="#444" BorderThickness="1" Padding="12">
+        <StackPanel>
+            <TextBlock Text="USE ITEM" Foreground="#E8E8E8" FontFamily="Consolas"
+                       FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+            <ListBox x:Name="lstItems" Background="#111" Foreground="White"
+                     FontFamily="Consolas" FontSize="12" Height="160"
+                     BorderBrush="#333" BorderThickness="1"/>
+            <TextBlock x:Name="lblDesc" Text="" Foreground="#8E8E93" FontFamily="Consolas"
+                       FontSize="10" TextWrapping="Wrap" Margin="0,6,0,6" Height="40"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnUse"    Content="USE"    Width="80" Margin="4,0" Padding="8,5"
+                        Background="#30D158" Foreground="#000" FontFamily="Consolas" FontWeight="Bold"/>
+                <Button x:Name="btnCancel" Content="CANCEL" Width="80" Margin="4,0" Padding="8,5"
+                        Background="#2A2A2E" Foreground="#E8E8E8" FontFamily="Consolas"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
+"@
+    try { $pw = [Windows.Markup.XamlReader]::Parse($pickerXaml) } catch { return $null }
+    $pw.Owner = $OwnerWin
+    $lst    = $pw.FindName("lstItems")
+    $lblD   = $pw.FindName("lblDesc")
+    $btnU   = $pw.FindName("btnUse")
+    $btnC   = $pw.FindName("btnCancel")
+    $chosen = $null
+
+    foreach ($id in $ItemIds) {
+        $item = $script:ItemDB[$id]
+        $label = if ($item) { $item.Name } else { $id }
+        if ($item.HealHP) { $label += "  (+$($item.HealHP) HP)" }
+        if ($item.HealMP) { $label += "  (+$($item.HealMP) MP)" }
+        [void]$lst.Items.Add($label)
+    }
+    $lst.Add_SelectionChanged({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $ItemIds.Count) {
+            $it = $script:ItemDB[$ItemIds[$idx]]
+            $lblD.Text = if ($it -and $it.Desc) { $it.Desc } else { "" }
+        }
+    })
+    $btnU.Add_Click({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $ItemIds.Count) { $chosen = $ItemIds[$idx] }
+        $pw.Tag = $chosen; $pw.Close()
+    })
+    $btnC.Add_Click({ $pw.Tag = $null; $pw.Close() })
+    $pw.ShowDialog() | Out-Null
+    return $pw.Tag
+}
+
+function Show-CombatWindow {
+    param([string]$EnemyId)
+    $g    = $script:GS
+    $edef = $script:EnemyDB[$EnemyId]
+    if (-not $edef) { return }
+
+    $script:CombatSummaryText = ""
+
+    $cwXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Combat" Width="700" Height="540"
+        WindowStyle="None" Background="#0F0F0F"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Background"   Value="#1E1E22"/>
+      <Setter Property="Foreground"   Value="#E8E8E8"/>
+      <Setter Property="FontFamily"   Value="Consolas"/>
+      <Setter Property="FontSize"     Value="12"/>
+      <Setter Property="FontWeight"   Value="Bold"/>
+      <Setter Property="Padding"      Value="0,8"/>
+      <Setter Property="BorderBrush"  Value="#444"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor"       Value="Hand"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="#2C2C32"/>
+          <Setter Property="BorderBrush" Value="#666"/>
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground"   Value="#444"/>
+          <Setter Property="BorderBrush"  Value="#2A2A2A"/>
+          <Setter Property="Background"   Value="#141416"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+  <Border BorderBrush="#FF3B30" BorderThickness="2">
+    <Grid Margin="16,12,16,14">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <!-- Drag bar / title -->
+      <Border x:Name="dragBar" Grid.Row="0" Background="Transparent" Cursor="SizeAll" Margin="0,0,0,10">
+        <TextBlock Text="--- COMBAT ---" Foreground="#FF3B30" FontFamily="Consolas"
+                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+      </Border>
+
+      <!-- Enemy info row -->
+      <Grid Grid.Row="1" Margin="0,0,0,6">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="210"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock x:Name="lblCEnemy"       Foreground="#FF6B60" FontFamily="Consolas" FontSize="20" FontWeight="Bold"/>
+          <TextBlock x:Name="lblCEnemyDesc"   Foreground="#6E6E73" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Margin="0,2,12,0"/>
+          <TextBlock x:Name="lblCEnemySpecial" Foreground="#FFB020" FontFamily="Consolas" FontSize="10" Margin="0,3,0,0" FontStyle="Italic"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <DockPanel Margin="0,0,0,3">
+            <TextBlock Text="HP " Foreground="#6E6E73" FontFamily="Consolas" FontSize="11"/>
+            <TextBlock x:Name="lblCEnemyHP"  Foreground="#FF453A" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+          </DockPanel>
+          <ProgressBar x:Name="barCEnemyHP" Height="18" Minimum="0" Maximum="100" Value="100"
+                       Foreground="#FF3B30" Background="#2A0808" BorderThickness="0"/>
+          <TextBlock x:Name="lblCEnemyDef" Foreground="#FFB020" FontFamily="Consolas" FontSize="10"
+                     HorizontalAlignment="Right" Margin="0,5,0,0"/>
+        </StackPanel>
+      </Grid>
+
+      <Rectangle Grid.Row="2" Fill="#2A2A2A" Height="1" Margin="0,2,0,4"/>
+
+      <!-- Combat log -->
+      <Border Grid.Row="3" Background="#060608" BorderBrush="#1C1C1E" BorderThickness="1" Margin="0,0,0,4">
+        <ScrollViewer x:Name="svCLog" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0">
+          <RichTextBox x:Name="rtbCLog" Background="Transparent" BorderThickness="0"
+                       Foreground="#C8C8C8" FontFamily="Consolas" FontSize="11"
+                       IsReadOnly="True" Padding="8,5"
+                       ScrollViewer.VerticalScrollBarVisibility="Disabled"/>
+        </ScrollViewer>
+      </Border>
+
+      <Rectangle Grid.Row="4" Fill="#2A2A2A" Height="1" Margin="0,4,0,8"/>
+
+      <!-- Player bars -->
+      <Grid Grid.Row="5" Margin="0,0,0,10">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="120"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,10,0">
+          <DockPanel Margin="0,0,0,3">
+            <TextBlock Text="HP " Foreground="#6E6E73" FontFamily="Consolas" FontSize="11"/>
+            <TextBlock x:Name="lblCPlayerHP" Foreground="#30D158" FontFamily="Consolas" FontSize="11" DockPanel.Dock="Right"/>
+          </DockPanel>
+          <ProgressBar x:Name="barCPlayerHP" Height="18" Minimum="0" Maximum="100" Value="100"
+                       Foreground="#30D158" Background="#0A2A0A" BorderThickness="0"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Margin="0,0,10,0">
+          <DockPanel Margin="0,0,0,3">
+            <TextBlock Text="MP " Foreground="#6E6E73" FontFamily="Consolas" FontSize="11"/>
+            <TextBlock x:Name="lblCPlayerMP" Foreground="#0A84FF" FontFamily="Consolas" FontSize="11" DockPanel.Dock="Right"/>
+          </DockPanel>
+          <ProgressBar x:Name="barCPlayerMP" Height="18" Minimum="0" Maximum="100" Value="100"
+                       Foreground="#0A84FF" Background="#0A0A2A" BorderThickness="0"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+          <TextBlock x:Name="lblCRound"  Foreground="#6E6E73" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right"/>
+          <TextBlock x:Name="lblCStatus" Foreground="#BF5AF2" FontFamily="Consolas" FontSize="10" HorizontalAlignment="Right" Margin="0,3,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Action buttons (2 x 4) -->
+      <UniformGrid Grid.Row="6" Rows="2" Columns="4">
+        <Button x:Name="btnCAttack"   Content="ATTACK"    Margin="2,2"/>
+        <Button x:Name="btnCSpell"    Content="SPELL"     Margin="2,2"/>
+        <Button x:Name="btnCTaunt"    Content="TAUNT"     Margin="2,2"/>
+        <Button x:Name="btnCDistract" Content="DISTRACT"  Margin="2,2"/>
+        <Button x:Name="btnCHide"     Content="HIDE"      Margin="2,2"/>
+        <Button x:Name="btnCItem"     Content="USE ITEM"  Margin="2,2"/>
+        <Button x:Name="btnCTalk"     Content="TALK"      Margin="2,2" Visibility="Collapsed"/>
+        <Button x:Name="btnCFlee"     Content="FLEE"      Margin="2,2" Foreground="#FF9F0A"/>
+      </UniformGrid>
+
+      <!-- End-of-combat overlay -->
+      <Border x:Name="panelEnd" Grid.Row="0" Grid.RowSpan="7" Background="#E50F0F0F" Visibility="Collapsed">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40,0">
+          <TextBlock x:Name="lblCEndTitle"   FontFamily="Consolas" FontSize="32" FontWeight="Bold"
+                     HorizontalAlignment="Center" Margin="0,0,0,14"/>
+          <TextBlock x:Name="lblCEndRewards" FontFamily="Consolas" FontSize="12" Foreground="#FFCC00"
+                     HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,8"/>
+          <TextBlock x:Name="lblCEndLevel"   FontFamily="Consolas" FontSize="13" Foreground="#30D158"
+                     HorizontalAlignment="Center" FontWeight="Bold" Margin="0,0,0,18"/>
+          <Button x:Name="btnCContinue" Content="CONTINUE" Padding="50,12"
+                  HorizontalAlignment="Center" Background="#1E1E22" Foreground="#E8E8E8"
+                  FontFamily="Consolas" FontWeight="Bold" FontSize="13" BorderBrush="#666"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Border>
+</Window>
+"@
+
+    try {
+        $cw = [Windows.Markup.XamlReader]::Parse($cwXaml)
+    } catch {
+        Write-Warn "Combat window failed: $_"
+        return
+    }
+    $cw.Owner = $script:Window
+    $script:CombatWindowRef = $cw
+
+    $ctrl = @{
+        lblCEnemy       = $cw.FindName("lblCEnemy")
+        lblCEnemyDesc   = $cw.FindName("lblCEnemyDesc")
+        lblCEnemySpecial= $cw.FindName("lblCEnemySpecial")
+        lblCEnemyHP     = $cw.FindName("lblCEnemyHP")
+        barCEnemyHP     = $cw.FindName("barCEnemyHP")
+        lblCEnemyDef    = $cw.FindName("lblCEnemyDef")
+        rtbCLog         = $cw.FindName("rtbCLog")
+        svCLog          = $cw.FindName("svCLog")
+        lblCPlayerHP    = $cw.FindName("lblCPlayerHP")
+        barCPlayerHP    = $cw.FindName("barCPlayerHP")
+        lblCPlayerMP    = $cw.FindName("lblCPlayerMP")
+        barCPlayerMP    = $cw.FindName("barCPlayerMP")
+        lblCRound       = $cw.FindName("lblCRound")
+        lblCStatus      = $cw.FindName("lblCStatus")
+        btnCAttack      = $cw.FindName("btnCAttack")
+        btnCSpell       = $cw.FindName("btnCSpell")
+        btnCTaunt       = $cw.FindName("btnCTaunt")
+        btnCDistract    = $cw.FindName("btnCDistract")
+        btnCHide        = $cw.FindName("btnCHide")
+        btnCItem        = $cw.FindName("btnCItem")
+        btnCTalk        = $cw.FindName("btnCTalk")
+        btnCFlee        = $cw.FindName("btnCFlee")
+        panelEnd        = $cw.FindName("panelEnd")
+        lblCEndTitle    = $cw.FindName("lblCEndTitle")
+        lblCEndRewards  = $cw.FindName("lblCEndRewards")
+        lblCEndLevel    = $cw.FindName("lblCEndLevel")
+        btnCContinue    = $cw.FindName("btnCContinue")
+        dragBar         = $cw.FindName("dragBar")
+    }
+    $script:CombatWinControls = $ctrl
+    $script:CombatLogRTB      = $ctrl.rtbCLog
+
+    # Populate static enemy info
+    $ctrl.lblCEnemy.Text     = $edef.Name
+    $ctrl.lblCEnemyDesc.Text = if ($edef.Desc) { $edef.Desc } else { "" }
+    $ctrl.lblCEnemySpecial.Text = if ($edef.Special) {
+        "Special: $($edef.Special) ($($edef.SpecialChance)% chance per round)"
+    } else { "" }
+    if ($edef.CanTalk) { $ctrl.btnCTalk.Visibility = "Visible" }
+
+    # Enable window dragging on the title bar
+    $ctrl.dragBar.Add_MouseLeftButtonDown({ $cw.DragMove() })
+
+    # Initial state
+    Update-CombatWindow
+
+    # ---- Action button wiring ----
+    # Each handler calls a game function, then checks if combat ended.
+    # All references use $script: variables so closure capture is not needed.
+
+    $ctrl.btnCAttack.Add_Click({
+        Do-Attack
+        Update-CombatWindow; Update-HUD
+        if (-not $script:GS.InCombat) { Show-CombatEndScreen }
+    })
+    $ctrl.btnCSpell.Add_Click({
+        Do-CastSpell
+        Update-CombatWindow; Update-HUD
+        if (-not $script:GS.InCombat) { Show-CombatEndScreen }
+    })
+    $ctrl.btnCTaunt.Add_Click({
+        Do-Taunt
+        Update-CombatWindow; Update-HUD
+        if (-not $script:GS.InCombat) { Show-CombatEndScreen }
+    })
+    $ctrl.btnCDistract.Add_Click({
+        Do-Distract
+        Update-CombatWindow
+    })
+    $ctrl.btnCHide.Add_Click({
+        Do-Hide
+        Update-CombatWindow
+    })
+    $ctrl.btnCItem.Add_Click({
+        $consumables = @($script:GS.Inventory | Where-Object {
+            $i = $script:ItemDB[$_]; $i -and $i.Type -eq "consumable"
+        })
+        if ($consumables.Count -eq 0) { Append-CombatLog "No usable items." "#FFD60A"; return }
+        $chosen = Show-CombatItemPicker $consumables $script:CombatWindowRef
+        if ($chosen) {
+            Invoke-UseItem $chosen
+            Update-CombatWindow; Update-HUD
+            if (-not $script:GS.InCombat) { Show-CombatEndScreen }
+        }
+    })
+    $ctrl.btnCTalk.Add_Click({
+        Do-Talk ""
+        Update-CombatWindow
+    })
+    $ctrl.btnCFlee.Add_Click({
+        Do-Flee
+        Update-CombatWindow; Update-HUD
+        if (-not $script:GS.InCombat) {
+            $script:CombatWindowRef.Close()
+        }
+    })
+    $ctrl.btnCContinue.Add_Click({
+        $script:CombatWindowRef.Close()
+    })
+
+    $cw.ShowDialog() | Out-Null
+
+    # Cleanup
+    $script:CombatLogRTB      = $null
+    $script:CombatWinControls = $null
+    $script:CombatWindowRef   = $null
+}
 
 # ============================================================
 # DIALOGUE SYSTEM (Fallout-style)
@@ -3254,9 +3668,14 @@ function Do-Quests {
     Write-Sep
 }
 
+$script:CraftRecipes = @(
+    @{ Result="jugs_o_boom";   Name="Carl's Jug O' Boom";        Ingredients=@("scrap_metal","chemical_jug","explosive_gel") }
+    @{ Result="smoke_bomb";    Name="Smoke Bomb";                 Ingredients=@("explosive_gel","duct_tape") }
+    @{ Result="health_potion"; Name="Health Potion (crafted)";   Ingredients=@("dungeon_crystal","duct_tape") }
+)
+
 function Do-Craft {
-    Write-Info "Crafting not yet implemented. Combine items from your inventory when you have more components."
-    $script:GS.AchieveStat_items_crafted++
+    Show-InventoryWindow -StartTab "craft"
 }
 
 function Do-Move {
@@ -3640,6 +4059,583 @@ function Apply-MapDrop {
     $g.Inventory = $g.Inventory | Where-Object { $_ -ne $MapItemId }
 }
 
+
+# ============================================================
+# INVENTORY WINDOW (dedicated modal)
+# ============================================================
+function Show-InventoryWindow {
+    param([string]$StartTab = "items")
+    $g = $script:GS
+    if (-not $g) { return }
+
+    $invXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Inventory" Width="940" Height="680"
+        WindowStyle="None" Background="#0D0D0F"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Background"       Value="#1E1E22"/>
+      <Setter Property="Foreground"       Value="#E8E8E8"/>
+      <Setter Property="FontFamily"       Value="Consolas"/>
+      <Setter Property="FontSize"         Value="11"/>
+      <Setter Property="FontWeight"       Value="Bold"/>
+      <Setter Property="Padding"          Value="10,6"/>
+      <Setter Property="BorderBrush"      Value="#444"/>
+      <Setter Property="BorderThickness"  Value="1"/>
+      <Setter Property="Cursor"           Value="Hand"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background"   Value="#2C2C32"/>
+          <Setter Property="BorderBrush"  Value="#666"/>
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground"   Value="#444"/>
+          <Setter Property="Background"   Value="#141416"/>
+          <Setter Property="BorderBrush"  Value="#2A2A2A"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="Background"      Value="#111115"/>
+      <Setter Property="Foreground"      Value="#E8E8E8"/>
+      <Setter Property="FontFamily"      Value="Consolas"/>
+      <Setter Property="FontSize"        Value="12"/>
+      <Setter Property="BorderBrush"     Value="#333"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+    <Style TargetType="ListBoxItem">
+      <Setter Property="Padding"         Value="8,5"/>
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background"  Value="#2C2C3A"/>
+          <Setter Property="Foreground"  Value="#FFFFFF"/>
+        </Trigger>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background"  Value="#1E1E28"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+  <Border BorderBrush="#444" BorderThickness="1">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <!-- Title bar -->
+      <Border x:Name="invDragBar" Grid.Row="0" Background="#111115" Padding="16,10" Cursor="SizeAll">
+        <DockPanel>
+          <TextBlock Text="INVENTORY" Foreground="#E8E8E8" FontFamily="Consolas"
+                     FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+          <TextBlock x:Name="lblInvGold" Text="" Foreground="#FFCC00" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
+          <TextBlock x:Name="lblInvBoxes" Text="" Foreground="#BF5AF2" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
+          <Button x:Name="btnInvClose" Content="X  CLOSE" DockPanel.Dock="Right"
+                  Background="#2A0808" Foreground="#FF453A" BorderBrush="#FF3B30"
+                  Padding="12,6" FontSize="11"/>
+        </DockPanel>
+      </Border>
+
+      <!-- Main body: 3 columns -->
+      <Grid Grid.Row="1" Margin="0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="220"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="220"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: Item list -->
+        <Border BorderBrush="#222" BorderThickness="0,0,1,0" Padding="12,10">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="ITEMS" Foreground="#6E6E73" FontFamily="Consolas"
+                       FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+            <ListBox x:Name="lstInvItems" Grid.Row="1"/>
+            <Button x:Name="btnTakeAllInv" Grid.Row="2" Content="TAKE ALL" Margin="0,8,0,0"
+                    HorizontalAlignment="Stretch"/>
+          </Grid>
+        </Border>
+
+        <!-- CENTER: Item detail -->
+        <Grid Grid.Column="1" Margin="16,10,16,10">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <!-- Item name + rarity -->
+          <StackPanel Grid.Row="0" Margin="0,0,0,4">
+            <TextBlock x:Name="lblItemName" Text="Select an item" Foreground="#E8E8E8"
+                       FontFamily="Consolas" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+              <Border x:Name="borderRarity" Background="#333" Padding="6,2" CornerRadius="2" Margin="0,0,8,0">
+                <TextBlock x:Name="lblRarity" Text="" Foreground="#E8E8E8" FontFamily="Consolas" FontSize="10" FontWeight="Bold"/>
+              </Border>
+              <TextBlock x:Name="lblItemType" Text="" Foreground="#8E8E93" FontFamily="Consolas" FontSize="11"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- Stat bonuses -->
+          <Border Grid.Row="1" Background="#111115" BorderBrush="#222" BorderThickness="1"
+                  Padding="10,8" Margin="0,6,0,6">
+            <StackPanel x:Name="panelItemStats"/>
+          </Border>
+
+          <!-- Description -->
+          <TextBlock x:Name="lblItemDesc" Grid.Row="2" Text="" Foreground="#C8C8C8"
+                     FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+          <!-- Lore -->
+          <Border Grid.Row="3" Background="#0A0A0C" Padding="10,8" Margin="0,0,0,10">
+            <TextBlock x:Name="lblItemLore" Text="" Foreground="#6E6E73" FontFamily="Consolas"
+                       FontSize="10" TextWrapping="Wrap" FontStyle="Italic"/>
+          </Border>
+
+          <!-- Equip comparison (only for weapons/armor) -->
+          <Border x:Name="panelCompare" Grid.Row="4" Background="#111115" BorderBrush="#333"
+                  BorderThickness="1" Padding="10,6" Margin="0,0,0,8" Visibility="Collapsed">
+            <TextBlock x:Name="lblCompare" Text="" Foreground="#FFD60A" FontFamily="Consolas"
+                       FontSize="11" TextWrapping="Wrap"/>
+          </Border>
+
+          <!-- Action buttons -->
+          <StackPanel Grid.Row="5" Orientation="Horizontal">
+            <Button x:Name="btnInvEquip"  Content="EQUIP"     Margin="0,0,8,0" Background="#1E3A1E" BorderBrush="#30D158" Foreground="#30D158"/>
+            <Button x:Name="btnInvUse"    Content="USE"       Margin="0,0,8,0" Background="#1E2A3A" BorderBrush="#0A84FF" Foreground="#64D2FF"/>
+            <Button x:Name="btnInvDrop"   Content="DROP"      Margin="0,0,0,0" Background="#2A1E1E" BorderBrush="#FF453A" Foreground="#FF6B60"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- RIGHT: Equipment slots + loot boxes -->
+        <Border Grid.Column="2" BorderBrush="#222" BorderThickness="1,0,0,0" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="EQUIPPED" Foreground="#6E6E73" FontFamily="Consolas"
+                       FontSize="10" FontWeight="Bold" Margin="0,0,0,8"/>
+
+            <!-- Weapon slot -->
+            <Border Background="#111115" BorderBrush="#333" BorderThickness="1" Padding="8,6" Margin="0,0,0,4">
+              <StackPanel>
+                <TextBlock Text="WEAPON" Foreground="#6E6E73" FontFamily="Consolas" FontSize="9"/>
+                <TextBlock x:Name="lblEqWeapon" Text="Bare Hands" Foreground="#E8E8E8"
+                           FontFamily="Consolas" FontSize="12" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock x:Name="lblEqWeaponStat" Text="" Foreground="#64D2FF" FontFamily="Consolas" FontSize="10"/>
+                <Button x:Name="btnUnequipWeapon" Content="UNEQUIP" Margin="0,4,0,0"
+                        Background="#1A1A1E" Foreground="#6E6E73" FontSize="10" Padding="6,3"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Armor slot -->
+            <Border Background="#111115" BorderBrush="#333" BorderThickness="1" Padding="8,6" Margin="0,0,0,4">
+              <StackPanel>
+                <TextBlock Text="ARMOR" Foreground="#6E6E73" FontFamily="Consolas" FontSize="9"/>
+                <TextBlock x:Name="lblEqArmor" Text="Street Clothes" Foreground="#E8E8E8"
+                           FontFamily="Consolas" FontSize="12" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock x:Name="lblEqArmorStat" Text="" Foreground="#64D2FF" FontFamily="Consolas" FontSize="10"/>
+                <Button x:Name="btnUnequipArmor" Content="UNEQUIP" Margin="0,4,0,0"
+                        Background="#1A1A1E" Foreground="#6E6E73" FontSize="10" Padding="6,3"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Accessory slot -->
+            <Border Background="#111115" BorderBrush="#333" BorderThickness="1" Padding="8,6" Margin="0,0,0,12">
+              <StackPanel>
+                <TextBlock Text="ACCESSORY" Foreground="#6E6E73" FontFamily="Consolas" FontSize="9"/>
+                <TextBlock x:Name="lblEqAccessory" Text="(none)" Foreground="#6E6E73"
+                           FontFamily="Consolas" FontSize="12" FontWeight="Bold"/>
+                <Button x:Name="btnUnequipAccessory" Content="UNEQUIP" Margin="0,4,0,0"
+                        Background="#1A1A1E" Foreground="#6E6E73" FontSize="10" Padding="6,3"/>
+              </StackPanel>
+            </Border>
+
+            <Rectangle Fill="#222" Height="1" Margin="0,0,0,10"/>
+
+            <!-- Loot boxes -->
+            <TextBlock Text="LOOT BOXES" Foreground="#6E6E73" FontFamily="Consolas"
+                       FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+            <Border Background="#111115" BorderBrush="#333" BorderThickness="1" Padding="8,6" Margin="0,0,0,6">
+              <StackPanel>
+                <TextBlock x:Name="lblBoxCount" Text="0 boxes" Foreground="#FFCC00"
+                           FontFamily="Consolas" FontSize="13" FontWeight="Bold"/>
+                <TextBlock Text="Safe rooms only" Foreground="#6E6E73" FontFamily="Consolas" FontSize="9" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Border>
+            <Button x:Name="btnInvOpenBox" Content="OPEN BOX" HorizontalAlignment="Stretch"
+                    Background="#1A1A0A" BorderBrush="#FFCC00" Foreground="#FFCC00"/>
+
+            <Rectangle Fill="#222" Height="1" Margin="0,12,0,10"/>
+
+            <!-- Crafting -->
+            <TextBlock Text="CRAFTING" Foreground="#6E6E73" FontFamily="Consolas"
+                       FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+            <ListBox x:Name="lstRecipes" Height="120" Margin="0,0,0,6"/>
+            <Border x:Name="panelCraftDetail" Background="#111115" BorderBrush="#333"
+                    BorderThickness="1" Padding="8,6" Margin="0,0,0,6" Visibility="Collapsed">
+              <StackPanel>
+                <TextBlock x:Name="lblCraftName"   Text="" Foreground="#E8E8E8" FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
+                <TextBlock x:Name="lblCraftIngred" Text="" Foreground="#C8C8C8" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/>
+              </StackPanel>
+            </Border>
+            <Button x:Name="btnCraft" Content="CRAFT" HorizontalAlignment="Stretch"
+                    Background="#1A2A1A" BorderBrush="#30D158" Foreground="#30D158"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
+"@
+
+    try {
+        $iw = [Windows.Markup.XamlReader]::Parse($invXaml)
+    } catch {
+        Write-Warn "Inventory window failed: $_"
+        return
+    }
+    $iw.Owner = $script:Window
+
+    # ---- Control references ----
+    $dragBar        = $iw.FindName("invDragBar")
+    $btnClose       = $iw.FindName("btnInvClose")
+    $lblGold        = $iw.FindName("lblInvGold")
+    $lblBoxHdr      = $iw.FindName("lblInvBoxes")
+    $lstItems       = $iw.FindName("lstInvItems")
+    $btnTakeAll     = $iw.FindName("btnTakeAllInv")
+    $lblName        = $iw.FindName("lblItemName")
+    $lblRarity      = $iw.FindName("lblRarity")
+    $borderRarity   = $iw.FindName("borderRarity")
+    $lblType        = $iw.FindName("lblItemType")
+    $panelStats     = $iw.FindName("panelItemStats")
+    $lblDesc        = $iw.FindName("lblItemDesc")
+    $lblLore        = $iw.FindName("lblItemLore")
+    $panelCompare   = $iw.FindName("panelCompare")
+    $lblCompare     = $iw.FindName("lblCompare")
+    $btnEquip       = $iw.FindName("btnInvEquip")
+    $btnUse         = $iw.FindName("btnInvUse")
+    $btnDrop        = $iw.FindName("btnInvDrop")
+    $lblEqWeapon    = $iw.FindName("lblEqWeapon")
+    $lblEqWeaponSt  = $iw.FindName("lblEqWeaponStat")
+    $lblEqArmor     = $iw.FindName("lblEqArmor")
+    $lblEqArmorSt   = $iw.FindName("lblEqArmorStat")
+    $lblEqAccessory = $iw.FindName("lblEqAccessory")
+    $btnUnequipW    = $iw.FindName("btnUnequipWeapon")
+    $btnUnequipA    = $iw.FindName("btnUnequipArmor")
+    $btnUnequipAcc  = $iw.FindName("btnUnequipAccessory")
+    $lblBoxCount    = $iw.FindName("lblBoxCount")
+    $btnOpenBox     = $iw.FindName("btnInvOpenBox")
+    $lstRecipes     = $iw.FindName("lstRecipes")
+    $panelCraftD    = $iw.FindName("panelCraftDetail")
+    $lblCraftName   = $iw.FindName("lblCraftName")
+    $lblCraftIngred = $iw.FindName("lblCraftIngred")
+    $btnCraftIt     = $iw.FindName("btnCraft")
+
+    $conv = [System.Windows.Media.BrushConverter]::new()
+
+    $rarityColors = @{
+        "common"    = @("#6E6E73", "#E8E8E8")
+        "uncommon"  = @("#1A3A1A", "#30D158")
+        "rare"      = @("#1A1A3A", "#0A84FF")
+        "epic"      = @("#2A1A3A", "#BF5AF2")
+        "legendary" = @("#3A2800", "#FFD60A")
+    }
+
+    # ---- Helper: refresh header stats ----
+    $refreshHeader = {
+        $lblGold.Text   = "Gold: $($g.Gold)g"
+        $lblBoxHdr.Text = "Loot Boxes: $($g.LootBoxes)"
+        $lblBoxCount.Text = "$($g.LootBoxes) box$(if($g.LootBoxes -ne 1){'es'}else{''})"
+        # Equipment slots
+        $wItem = if ($g.EquippedWeapon)    { $script:ItemDB[$g.EquippedWeapon] }    else { $null }
+        $aItem = if ($g.EquippedArmor)     { $script:ItemDB[$g.EquippedArmor] }     else { $null }
+        $accIt = if ($g.EquippedAccessory) { $script:ItemDB[$g.EquippedAccessory] } else { $null }
+        $lblEqWeapon.Text   = if ($wItem)  { $wItem.Name }  else { "Bare Hands" }
+        $lblEqWeaponSt.Text = if ($wItem -and $wItem.Attack)  { "ATK +$($wItem.Attack)" }  else { "" }
+        $lblEqArmor.Text    = if ($aItem)  { $aItem.Name }  else { "Street Clothes" }
+        $lblEqArmorSt.Text  = if ($aItem -and $aItem.Defense) { "DEF +$($aItem.Defense)" } else { "" }
+        $lblEqAccessory.Text = if ($accIt) { $accIt.Name }  else { "(none)" }
+        $lblEqAccessory.Foreground = if ($accIt) { $conv.ConvertFromString("#E8E8E8") } else { $conv.ConvertFromString("#6E6E73") }
+        $btnOpenBox.IsEnabled = ($g.LootBoxes -gt 0)
+        $room = $script:RoomDB[$g.CurrentRoom]
+        $btnOpenBox.ToolTip = if (-not ($room -and $room.IsSafeRoom)) { "Safe rooms only" } else { $null }
+    }
+
+    # ---- Helper: rebuild item list ----
+    $refreshList = {
+        $lstItems.Items.Clear()
+        $typeOrder = @("weapon","armor","accessory","consumable","craft","map","quest","misc")
+        $grouped = @{}
+        foreach ($id in $g.Inventory) {
+            $item = $script:ItemDB[$id]
+            $t = if ($item -and $item.Type) { $item.Type } else { "misc" }
+            if (-not $grouped.ContainsKey($t)) { $grouped[$t] = @() }
+            $grouped[$t] += $id
+        }
+        foreach ($type in $typeOrder) {
+            if (-not $grouped.ContainsKey($type)) { continue }
+            $header = New-Object System.Windows.Controls.ListBoxItem
+            $header.Content = "-- $($type.ToUpper()) --"
+            $header.Foreground = $conv.ConvertFromString("#6E6E73")
+            $header.IsEnabled = $false
+            $header.FontSize = 10
+            $header.Padding = "8,3"
+            [void]$lstItems.Items.Add($header)
+            foreach ($id in $grouped[$type]) {
+                $item = $script:ItemDB[$id]
+                $lbl  = if ($item) { $item.Name } else { $id }
+                $rc   = $rarityColors[$(if($item -and $item.Rarity){$item.Rarity}else{"common"})]
+                $lbi  = New-Object System.Windows.Controls.ListBoxItem
+                $lbi.Content = $lbl
+                $lbi.Tag     = $id
+                $lbi.Foreground = $conv.ConvertFromString($rc[1])
+                [void]$lstItems.Items.Add($lbi)
+            }
+        }
+        if ($g.Inventory.Count -eq 0) {
+            $empty = New-Object System.Windows.Controls.ListBoxItem
+            $empty.Content = "(empty)"
+            $empty.Foreground = $conv.ConvertFromString("#6E6E73")
+            $empty.IsEnabled = $false
+            [void]$lstItems.Items.Add($empty)
+        }
+    }
+
+    # ---- Helper: show item detail ----
+    $showDetail = {
+        param([string]$ItemId)
+        $item = $script:ItemDB[$ItemId]
+        if (-not $item) { return }
+        $lblName.Text = $item.Name
+        $lblType.Text = $item.Type.ToUpper()
+        $lblDesc.Text = if ($item.Desc) { $item.Desc } else { "" }
+        $lblLore.Text = if ($item.Lore) { $item.Lore } else { "" }
+
+        $rar = if ($item.Rarity) { $item.Rarity } else { "common" }
+        $rc  = $rarityColors[$rar]
+        $borderRarity.Background = $conv.ConvertFromString($rc[0])
+        $lblRarity.Text          = $rar.ToUpper()
+        $lblRarity.Foreground    = $conv.ConvertFromString($rc[1])
+
+        # Stat panel
+        $panelStats.Children.Clear()
+        $makeStatLine = {
+            param([string]$Label, [string]$Val, [string]$Color="#64D2FF")
+            $sp = New-Object System.Windows.Controls.StackPanel
+            $sp.Orientation = "Horizontal"
+            $sp.Margin = New-Object System.Windows.Thickness(0,1,0,1)
+            $t1 = New-Object System.Windows.Controls.TextBlock
+            $t1.Text = "$Label  "; $t1.Foreground = $conv.ConvertFromString("#6E6E73")
+            $t1.FontFamily = "Consolas"; $t1.FontSize = 11; $t1.Width = 90
+            $t2 = New-Object System.Windows.Controls.TextBlock
+            $t2.Text = $Val; $t2.Foreground = $conv.ConvertFromString($Color)
+            $t2.FontFamily = "Consolas"; $t2.FontSize = 11; $t2.FontWeight = "Bold"
+            $sp.Children.Add($t1); $sp.Children.Add($t2)
+            return $sp
+        }
+        if ($item.Attack)  { [void]$panelStats.Children.Add((&$makeStatLine "Attack"  "+$($item.Attack)"  "#FF6B60")) }
+        if ($item.Defense) { [void]$panelStats.Children.Add((&$makeStatLine "Defense" "+$($item.Defense)" "#64D2FF")) }
+        if ($item.HealHP)  { [void]$panelStats.Children.Add((&$makeStatLine "Heals HP" "+$($item.HealHP)" "#30D158")) }
+        if ($item.HealMP)  { [void]$panelStats.Children.Add((&$makeStatLine "Heals MP" "+$($item.HealMP)" "#0A84FF")) }
+        if ($item.BuffSTR) { [void]$panelStats.Children.Add((&$makeStatLine "STR Buff" "+$($item.BuffSTR)" "#FFD60A")) }
+        if ($item.BossBonus) { [void]$panelStats.Children.Add((&$makeStatLine "vs Bosses" "+$($item.BossBonus)" "#BF5AF2")) }
+        if ($item.Value)   { [void]$panelStats.Children.Add((&$makeStatLine "Value"    "$($item.Value)g"  "#FFCC00")) }
+        if ($panelStats.Children.Count -eq 0) {
+            $t = New-Object System.Windows.Controls.TextBlock
+            $t.Text = "(no stats)"; $t.Foreground = $conv.ConvertFromString("#444")
+            $t.FontFamily = "Consolas"; $t.FontSize = 11
+            [void]$panelStats.Children.Add($t)
+        }
+
+        # Equip comparison
+        $panelCompare.Visibility = "Collapsed"
+        if ($item.Type -eq "weapon" -and $g.EquippedWeapon) {
+            $curr = $script:ItemDB[$g.EquippedWeapon]
+            if ($curr -and $curr.Attack -and $item.Attack) {
+                $diff = $item.Attack - $curr.Attack
+                $sign = if ($diff -ge 0) { "+" } else { "" }
+                $panelCompare.Visibility = "Visible"
+                $lblCompare.Text = "Replaces: $($curr.Name) (ATK $($curr.Attack))   Change: $sign$diff ATK"
+                $lblCompare.Foreground = $conv.ConvertFromString($(if($diff -ge 0){"#30D158"}else{"#FF453A"}))
+            }
+        } elseif ($item.Type -eq "armor" -and $g.EquippedArmor) {
+            $curr = $script:ItemDB[$g.EquippedArmor]
+            if ($curr -and $curr.Defense -and $item.Defense) {
+                $diff = $item.Defense - $curr.Defense
+                $sign = if ($diff -ge 0) { "+" } else { "" }
+                $panelCompare.Visibility = "Visible"
+                $lblCompare.Text = "Replaces: $($curr.Name) (DEF $($curr.Defense))   Change: $sign$diff DEF"
+                $lblCompare.Foreground = $conv.ConvertFromString($(if($diff -ge 0){"#30D158"}else{"#FF453A"}))
+            }
+        }
+
+        # Button states
+        $btnEquip.IsEnabled = ($item.Type -eq "weapon" -or $item.Type -eq "armor" -or $item.Type -eq "accessory")
+        $btnUse.IsEnabled   = ($item.Type -eq "consumable")
+        $btnDrop.IsEnabled  = $true
+    }
+
+    # ---- Helper: populate crafting recipes ----
+    $refreshRecipes = {
+        $lstRecipes.Items.Clear()
+        foreach ($recipe in $script:CraftRecipes) {
+            $canCraft = $true
+            foreach ($ing in $recipe.Ingredients) {
+                if ($g.Inventory -notcontains $ing) { $canCraft = $false; break }
+            }
+            $lbi = New-Object System.Windows.Controls.ListBoxItem
+            $lbi.Content = $(if ($canCraft) { "[OK] " } else { "[ ]  " }) + $recipe.Name
+            $lbi.Tag = $recipe
+            $lbi.Foreground = $conv.ConvertFromString($(if ($canCraft) { "#30D158" } else { "#6E6E73" }))
+            [void]$lstRecipes.Items.Add($lbi)
+        }
+    }
+
+    # ---- Initial populate ----
+    &$refreshHeader
+    &$refreshList
+    &$refreshRecipes
+    $btnEquip.IsEnabled = $false
+    $btnUse.IsEnabled   = $false
+    $btnDrop.IsEnabled  = $false
+
+    # ---- Wire events ----
+    $dragBar.Add_MouseLeftButtonDown({ $iw.DragMove() })
+    $btnClose.Add_Click({ $iw.Close() })
+
+    $lstItems.Add_SelectionChanged({
+        $lbi = $lstItems.SelectedItem
+        if ($lbi -and $lbi.Tag) { &$showDetail $lbi.Tag }
+    })
+
+    $btnEquip.Add_Click({
+        $lbi = $lstItems.SelectedItem
+        if ($lbi -and $lbi.Tag) {
+            Invoke-UseItem $lbi.Tag
+            Update-HUD
+            &$refreshHeader
+            &$refreshList
+            &$showDetail $lbi.Tag
+        }
+    })
+    $btnUse.Add_Click({
+        $lbi = $lstItems.SelectedItem
+        if ($lbi -and $lbi.Tag) {
+            $idToUse = $lbi.Tag
+            Invoke-UseItem $idToUse
+            Update-HUD
+            &$refreshHeader
+            &$refreshList
+            $lblName.Text = "Select an item"
+            $panelStats.Children.Clear()
+            $lblDesc.Text = ""; $lblLore.Text = ""
+            $btnEquip.IsEnabled = $false; $btnUse.IsEnabled = $false; $btnDrop.IsEnabled = $false
+            $panelCompare.Visibility = "Collapsed"
+        }
+    })
+    $btnDrop.Add_Click({
+        $lbi = $lstItems.SelectedItem
+        if ($lbi -and $lbi.Tag) {
+            $g.Inventory = @($g.Inventory | Where-Object { $_ -ne $lbi.Tag } )
+            Write-Info "Dropped: $($script:ItemDB[$lbi.Tag].Name)"
+            Update-HUD; &$refreshHeader; &$refreshList
+            $btnEquip.IsEnabled = $false; $btnUse.IsEnabled = $false; $btnDrop.IsEnabled = $false
+        }
+    })
+    $btnTakeAll.Add_Click({
+        $room = $script:RoomDB[$g.CurrentRoom]
+        if (-not $room.Searched) { Write-Warn "Search the room first."; return }
+        if (-not $room.Items -or $room.Items.Count -eq 0) { Write-Info "Nothing on the ground."; return }
+        foreach ($id in $room.Items) {
+            $g.Inventory += @($id)
+            Write-Loot "Picked up: $(if($script:ItemDB[$id]){$script:ItemDB[$id].Name}else{$id})"
+        }
+        $room.Items = @()
+        Update-HUD; &$refreshHeader; &$refreshList
+    })
+    $btnUnequipW.Add_Click({
+        if ($g.EquippedWeapon) {
+            $g.Inventory += @($g.EquippedWeapon)
+            Write-Info "Unequipped $($script:ItemDB[$g.EquippedWeapon].Name)."
+            $g.EquippedWeapon = $null; Update-HUD; &$refreshHeader; &$refreshList
+        }
+    })
+    $btnUnequipA.Add_Click({
+        if ($g.EquippedArmor) {
+            $g.Inventory += @($g.EquippedArmor)
+            Write-Info "Unequipped $($script:ItemDB[$g.EquippedArmor].Name)."
+            $g.EquippedArmor = $null; Update-HUD; &$refreshHeader; &$refreshList
+        }
+    })
+    $btnUnequipAcc.Add_Click({
+        if ($g.EquippedAccessory) {
+            $g.Inventory += @($g.EquippedAccessory)
+            Write-Info "Unequipped $($script:ItemDB[$g.EquippedAccessory].Name)."
+            $g.EquippedAccessory = $null; Update-HUD; &$refreshHeader; &$refreshList
+        }
+    })
+    $btnOpenBox.Add_Click({
+        $room = $script:RoomDB[$g.CurrentRoom]
+        if (-not ($room -and $room.IsSafeRoom)) { Write-Warn "Loot boxes can only be opened in safe rooms."; return }
+        if ($g.LootBoxes -le 0) { Write-Info "No loot boxes."; return }
+        $g.LootBoxes--
+        Open-LootBox
+        Update-HUD; &$refreshHeader; &$refreshList
+    })
+
+    $lstRecipes.Add_SelectionChanged({
+        $lbi = $lstRecipes.SelectedItem
+        if ($lbi -and $lbi.Tag) {
+            $recipe = $lbi.Tag
+            $panelCraftD.Visibility = "Visible"
+            $lblCraftName.Text = $recipe.Name
+            $ingLines = $recipe.Ingredients | ForEach-Object {
+                $have = $g.Inventory -contains $_
+                $it   = $script:ItemDB[$_]
+                $n    = if ($it) { $it.Name } else { $_ }
+                "$(if($have){'[v]'}else{'[ ]'})  $n"
+            }
+            $lblCraftIngred.Text = $ingLines -join "`n"
+            $canCraft = @($recipe.Ingredients | Where-Object { $g.Inventory -notcontains $_ }).Count -eq 0
+            $btnCraftIt.IsEnabled = $canCraft
+        } else {
+            $panelCraftD.Visibility = "Collapsed"
+            $btnCraftIt.IsEnabled = $false
+        }
+    })
+
+    $btnCraftIt.Add_Click({
+        $lbi = $lstRecipes.SelectedItem
+        if (-not ($lbi -and $lbi.Tag)) { return }
+        $recipe = $lbi.Tag
+        $canCraft = @($recipe.Ingredients | Where-Object { $g.Inventory -notcontains $_ }).Count -eq 0
+        if (-not $canCraft) { Write-Warn "Missing ingredients."; return }
+        # Remove one of each ingredient
+        foreach ($ing in $recipe.Ingredients) {
+            $found = $false
+            $g.Inventory = @($g.Inventory | Where-Object { if (-not $found -and $_ -eq $ing) { $found=$true; $false } else { $true } })
+        }
+        $g.Inventory += @($recipe.Result)
+        $g.AchieveStat_items_crafted++
+        $resultItem = $script:ItemDB[$recipe.Result]
+        Write-Loot "Crafted: $(if($resultItem){$resultItem.Name}else{$recipe.Result})!"
+        if ($g.AchieveStat_items_crafted -eq 1 -and $recipe.Result -eq "jugs_o_boom") { Grant-Achievement "jug_o_boom" }
+        Check-AllAchievements
+        Update-HUD; &$refreshHeader; &$refreshList; &$refreshRecipes
+    })
+
+    $iw.ShowDialog() | Out-Null
+}
 
 # ============================================================
 # COMMAND PARSER
@@ -4079,9 +5075,17 @@ if ($btnDistract) { $btnDistract.Add_Click({ Do-Distract }) }
 $btnUseItem = $script:Window.FindName("btnUseItem")
 if ($btnUseItem) { $btnUseItem.Add_Click({ Do-UseItemSelected }) }
 
-# ---- Inventory USE/EQUIP button ----
+# ---- Inventory button (top toolbar) ----
+$btnInvTop = $script:Window.FindName("btnInv")
+if ($btnInvTop) { $btnInvTop.Add_Click({ Show-InventoryWindow }) }
+
+# ---- Craft button (top toolbar) ----
+$btnCraftTop = $script:Window.FindName("btnCraft")
+if ($btnCraftTop) { $btnCraftTop.Add_Click({ Show-InventoryWindow -StartTab "craft" }) }
+
+# ---- Inventory USE/EQUIP button (side panel) ----
 $btnInvPanel = $script:Window.FindName("btnInvPanel")
-if ($btnInvPanel) { $btnInvPanel.Add_Click({ Do-UseItemSelected }) }
+if ($btnInvPanel) { $btnInvPanel.Add_Click({ Show-InventoryWindow }) }
 
 # ---- Loot box ----
 $btnOpenBox = $script:Window.FindName("btnOpenBox")
