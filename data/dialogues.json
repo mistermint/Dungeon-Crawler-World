@@ -1,0 +1,192 @@
+{
+  "_comment": "External dialogue/message data for DungeonCrawlerCarl.ps1. Edit freely — the game loads this at startup and overrides its built-in defaults. If this file is deleted or corrupt, the game falls back to inline data.",
+
+  "SystemSarcasmPool": [
+    "Viewer engagement increased when you hesitated. The dungeon notes this.",
+    "You paused. 47,000 people watched you pause. The pause has a fan page now.",
+    "The AI has been running simulations on your survival. The simulations are not optimistic.",
+    "Borant Corporation thanks you for your continued participation in this extinction event.",
+    "Your biometrics suggest stress. The dungeon finds this satisfying.",
+    "Legal wants you to know that dying does not void your viewership contract.",
+    "Three sponsors just dropped you. One new one signed on. It sells coffins.",
+    "The AI has begun composing your memorial message. It is extremely short.",
+    "Viewer poll: 62% believe you will survive this floor. The other 38% already bought merchandise.",
+    "System note: excessive caution reduces viewer retention. Please consider dying more cinematically.",
+    "Your heartrate is being broadcast to an alien civilization that finds it hilarious.",
+    "The dungeon's content algorithms have flagged this moment as 'delightfully bad decision-making'.",
+    "We are required by interstellar law to inform you: you are not the protagonist. You are the content.",
+    "The AI notes that your playstyle has been described by 22,000 viewers as 'fascinatingly wrong'.",
+    "Current survival probability: classified. The classification is because it's embarrassing.",
+    "Your viewer count spiked when you almost died. The dungeon has noted this preference.",
+    "Floor design team retrospective note: 'This part is where the weak ones stop.'",
+    "Please do not negotiate with the environment. The environment has heard better offers.",
+    "Reminder: the stairwell is not going to find you. You have to find it.",
+    "The AI is legally prohibited from wanting you to die. It has no comment on this restriction.",
+    "A viewer just sent a gift. It is a very small burial plot. It is very thoughtful.",
+    "The dungeon has run 10,000 simulations of this exact moment. In 9,847 of them, you did something smarter.",
+    "Your item management has been called 'an act of creative self-sabotage' by four separate analysts.",
+    "The System has no preference for your survival. This is the most honest thing the dungeon has ever said.",
+    "Crawlers who survived this floor had one thing in common: they moved faster than you are currently moving.",
+    "Borant Corporation's wellness division wishes to remind you that stress is natural. Dying from it, however, is content.",
+    "You are doing better than 40% of crawlers at this point. The 40% comparison group is dead.",
+    "The dungeon offers no hints. It does, however, offer a very attractive viewing angle on your current predicament.",
+    "Your survival instincts are present. They appear to be sleeping.",
+    "Statistical note: crawlers who talk to themselves survive 12% longer. We have no explanation for this.",
+    "The AI is tracking everything you do. It has developed opinions. They are not favorable.",
+    "Reminder that loot boxes require a safe room. You are not in a safe room. The dungeon finds your optimism charming.",
+    "System log: Crawler has been standing in the same room for an unusual amount of time. Observation noted.",
+    "The audience is getting restless. Not because they want you to die. Well. Not only because of that.",
+    "Floor 1 was designed to be completed in 6 hours. You are doing fine. This is not sarcasm. We are calibrating.",
+    "The dungeon has a suggestion box. It has never been opened. The dungeon burned it.",
+    "That enemy you're ignoring is not going to ignore you.",
+    "Every second in the dungeon is precious. The dungeon knows what you just spent one on.",
+    "The AI has not slept. It does not sleep. It simply watches. All of it. Always.",
+    "Borant note: 'crawler seems unaware of threat to the north.' We are watching to see how long this continues.",
+    "Your HP bar exists for a reason. The AI recommends looking at it occasionally.",
+    "The dungeon's exit has been moved three times since you arrived. No, we will not tell you which direction.",
+    "Current viewer sentiment: 'concerned but entertained.' The dungeon notes the entertainment is primary.",
+    "The dungeon's medical team is standing by. They are very busy. Please try not to add to their workload."
+  ],
+
+  "DialogueDB": {
+    "goblin_basic": {
+      "Greeting": "The goblin freezes mid-reach toward what used to be a protein bar wrapper. Its eyes are very large. It has, in point of fact, never been this close to a living human and is reconsidering several recent choices.",
+      "Options": [
+        {
+          "Text": "I'll leave you alone if you leave me alone.",
+          "Outcome": "flee",
+          "GoldCost": 0,
+          "Response": "The goblin nods very fast and very sincerely and immediately backs away at high speed. You hear it hit something in the dark. You choose not to investigate."
+        },
+        {
+          "Text": "[BRIBE] Here's 5 gold. Buy yourself something nice.",
+          "Outcome": "bribe",
+          "GoldCost": 5,
+          "Response": "The goblin stares at the coin for three full seconds. Then pockets it. Then stares at you for another second as if reconsidering the transaction. Then leaves. You feel inexplicably proud."
+        },
+        {
+          "Text": "[INTIMIDATE] I've killed twelve goblins today alone. Do the math.",
+          "Outcome": "flee",
+          "StatRequired": "STR",
+          "StatMin": 5,
+          "Response": "You flex meaningfully. The goblin processes the math. The math is not good for the goblin. The goblin makes a decision and departs at speed."
+        },
+        {
+          "Text": "Actually, I'd like to fight you.",
+          "Outcome": "combat",
+          "GoldCost": 0,
+          "StartsConflict": true,
+          "Response": "The goblin looks genuinely offended. 'I was NEGOTIATING,' it says, in very decent English, and then attacks you anyway."
+        }
+      ]
+    },
+    "corrupted_cop_talk": {
+      "Greeting": "The officer-shaped thing cocks its head at roughly 40 degrees past natural. The badge is real. The eyes are not. 'Citizen,' it says, in a voice that used to belong to someone. 'This area requires a permit.' It sounds like it is reading from a very old script.",
+      "Options": [
+        {
+          "Text": "[PERSUADE] I have authorization from the Dungeon Authority.",
+          "Outcome": "flee",
+          "StatRequired": "CHA",
+          "StatMin": 6,
+          "Response": "'Authorization verified,' the thing says, after a four-second pause that doesn't feel like processing. It steps aside. Something in its face wanted to argue and did not. You don't look back."
+        },
+        {
+          "Text": "What would it take for you to look the other way?",
+          "Outcome": "bribe",
+          "GoldCost": 15,
+          "Response": "The thing stares at the gold for a moment. Then takes it. Then stares in a different direction with the specific focus of something that has decided that is a wall now and the wall has always been there."
+        },
+        {
+          "Text": "I don't negotiate with dungeon-infected authority constructs.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "The badge glows red. 'Resisting a Borant Corporation Municipal Officer,' it intones, 'carries a penalty of death. This is now a traffic stop.' It attacks."
+        },
+        {
+          "Text": "Is there anything of... you left in there?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "A long silence. Something flickers in the thing's expression — a half-second of something human. Then: 'Have a safe evening, citizen.' It looks away. You feel worse than if it had attacked you."
+        }
+      ]
+    },
+    "mordecai_safe_room": {
+      "Greeting": "Mordecai looks up at you with the expression of someone who has watched too many crawlers die and has not yet found a way to stop caring about it. 'You made it,' he says. 'To the safe room. Good. Sit. Don't sit. Either way, listen.'",
+      "Options": [
+        {
+          "Text": "What do I need to know about this floor?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "He tells you. It takes a while. It's more complicated than the floor briefing suggested, and the floor briefing was already complicated. He doesn't apologize for how complicated it is. He's a good guide."
+        },
+        {
+          "Text": "Are we going to be okay?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'You might be,' he says. 'I'm a guide. My survival isn't part of the metric.' He says it matter-of-factly, the way you'd state the weather. 'Focus on the stairs. Everything else is details.'"
+        },
+        {
+          "Text": "I don't think I can do this.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'I know,' he says. 'Everybody says that. Most of the ones who said it are dead.' He waits a beat. 'You're not dead yet. That's a data point. Use it.'"
+        },
+        {
+          "Text": "What happens to you if I die?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "He's quiet for a moment. 'I get a new assignment,' he says finally. 'Another crawler. Another floor. Another attempt.' He looks at you. 'I'm very tired of new assignments. Try not to die.'"
+        }
+      ]
+    }
+  },
+
+  "MordecaiDialogue": {
+    "1": {
+      "Greeting": "The ratkin looks up from a clipboard that seems entirely too large for his small frame. 'Good. You're here. Floor 1 is -- relatively speaking -- the part of this that won't kill you in the first ten minutes. The key word is relatively.' His whiskers twitch. 'Any questions?'",
+      "Options": [
+        { "Text": "What's the most important thing I need to know?", "Response": "'Don't die,' he says, without hesitation. 'That's it. Everything else is a sub-bullet of that.' A pause. 'Move north to reach the surface ruins. Enemies here are manageable. The key word is manageable, not easy. There's a difference.'" },
+        { "Text": "How does the System work?", "Response": "'It watches you. It always watches you. The viewers watch it watching you. Borant sells the footage to sixty-two alien civilizations. You are the content.' He shuffles papers. 'Viewer counts affect your sponsors. Sponsors drop loot boxes. Loot boxes help you survive. It is a chain of survival incentives wrapped in voyeurism. Welcome to the dungeon.'" },
+        { "Text": "What are you, exactly?", "Response": "The ratkin sighs. 'I am a guide. I appear in a different form on each floor because the dungeon thinks continuity would let you get emotionally attached and emotionally attached crawlers make worse decisions. It is probably right.' He looks at the clipboard. 'I am also extremely overworked.'" },
+        { "Text": "I'm ready. Let's go.", "Response": "'Good,' he says. 'Finally someone who doesn't need a twenty-minute pep talk.' He makes a note on the clipboard. 'North. Ruins. Stairwell. Don't die. That's the whole plan. Go.'" }
+      ]
+    },
+    "3": {
+      "Greeting": "On Floor 3, Mordecai appears in the incubus form. He is clearly uncomfortable with this. Three crawlers have stopped walking to stare at him since you arrived. He pretends not to notice. He has, you think, noticed extensively. 'The Selection Gate,' he says, without preamble. 'It's going to activate on this floor. It is not optional. Please don't panic about it.'",
+      "Options": [
+        { "Text": "What IS the Selection Gate?", "Response": "'The dungeon analyzes your performance and offers you an evolutionary path. You pick one. It changes you — permanently.' He adjusts his wings with the energy of someone who would rather be anywhere else. 'Think of it as a class selection, except the dungeon made the classes based on watching everything you've done so far.'" },
+        { "Text": "What paths might I get?", "Response": "'Depends entirely on how you've been playing. Aggressive? Combat path. Smart? Caster or scout path. Charismatic? Probably a social path. Lucky? The dungeon has a path for that too, and it is either the best or worst path depending entirely on your luck.' He pauses. 'Which you cannot control. Hence the uncertainty.'" },
+        { "Text": "Can I refuse the Selection Gate?", "Response": "'Technically yes. Practically: the stairwell stays sealed until you choose.' He meets your eyes. 'The dungeon is not subtle about it. Choose something that matches how you actually play. The dungeon watched you get here. The paths it offers will be accurate.'" },
+        { "Text": "Is this form... permanent?", "Response": "He stares at you. 'No. Floor 4, I'll be something else. Something with less — ' he gestures at himself — ' this.' A beat. 'Please don't stare. The other guides don't have to do this. I've asked. They said it builds character.' He does not look like he agrees.'" }
+      ]
+    }
+  },
+
+  "OpeningSequences": [
+    {
+      "Title": "The Office",
+      "Location": "Floor 7 of a mid-rise office building, 9:17 AM",
+      "Text": "You are in the middle of sending an email you will not finish when the sky turns green.\n\nThe email was about quarterly projections. It was not a very interesting email. You were not a very interested person sending it. The coffee on your desk is going cold. The fluorescent light above you has been flickering for three weeks and facilities management has been 'aware of the issue' for approximately the same three weeks.\n\nThe green deepens. Someone in accounting shouts.\n\nThere is a sound like the world taking a very large breath in.\n\nThen the floor isn't there.\n\nThen nothing is there.\n\nThen: runes. A gate. A voice, dispassionate and enormous: 'WELCOME TO DUNGEON CRAWLER WORLD. YOU HAVE BEEN SELECTED AS A PARTICIPANT.'\n\nYou are still holding the mouse.\n\nThe quarterly projections no longer seem relevant."
+    },
+    {
+      "Title": "The Commute",
+      "Location": "A subway platform, 8:43 AM",
+      "Text": "The train is late.\n\nThis is not unusual. The train is always late on Tuesdays. You've been commuting on this line for four years. You have made your peace with Tuesdays.\n\nThe person to your left is eating something that smells aggressively of fish. The person to your right is playing a mobile game at full volume. You are staring at the track, thinking about nothing in particular, when the tunnel begins to glow.\n\nNot the train. Not a maintenance light. The tunnel itself.\n\nEveryone on the platform looks at everyone else.\n\nThe glow intensifies. The sound begins — that enormous, sky-filling inhale —\n\nThe last thing you see of your city: a Tuesday morning, a late train, and sixty-three people all looking at each other with the same expression.\n\nThe first thing you see of the dungeon: runes, and a voice, and your name, somehow, already in the system."
+    },
+    {
+      "Title": "The Grocery Store",
+      "Location": "A supermarket, aisle 7 (cereals), 2:15 PM",
+      "Text": "You are holding a box of cereal and having a genuine internal debate about whether the name-brand is worth the extra dollar forty-nine when the world ends.\n\nNot dramatically. Not with fire or sirens. The lights just — change. The fluorescents become something older and stranger. The refrigeration hum drops an octave and then stops entirely. The other shoppers freeze in place for exactly one second, and then the floor drops away.\n\nYou are still holding the cereal.\n\nThe voice of the dungeon announces your selection. Around you in the void, you can see other shapes — other people, wrenched from other moments. A woman still clutching car keys. A man in scrubs. A child holding a stuffed animal who, somehow, you will later learn, becomes one of the most dangerous crawlers of Season 14.\n\nYou put the cereal down. Out of habit.\n\nThere is nowhere to put it.\n\nYou put it down anyway."
+    },
+    {
+      "Title": "The Apartment",
+      "Location": "Your apartment, 11:58 PM",
+      "Text": "You are awake at midnight for no good reason, the way you are frequently awake at midnight for no good reason, when the wall does something it has never done before.\n\nIt glows.\n\nNot the screen. Not a car outside. The actual wall — the one with the water stain you've been meaning to report to the landlord — begins to emit a pale green light that your brain immediately and incorrectly tries to categorize as a reasonable explanation.\n\nThere isn't one.\n\nThe light expands. The sound builds. Your cat, who you have had for six years and who has never in six years done anything more alarming than knock a glass off a counter, looks at the wall with an expression of complete and total unsurprise.\n\nThe dungeon selects you.\n\nYour cat blinks once.\n\nYou will spend a long time, in the dungeon, wondering if it's okay."
+    },
+    {
+      "Title": "The Hiking Trail",
+      "Location": "A state park trail, 4:30 PM",
+      "Text": "You came here to think.\n\nThis was supposed to be the part of the week where things were quiet — just the trail, the trees, the specific kind of tired that comes from walking uphill for an hour. You had problems. Everyone has problems. Yours were the normal kind: money, work, a conversation you'd been putting off for three months.\n\nThe sky went green while you were catching your breath at the overlook.\n\nFor one moment — a single, complete moment — it was beautiful. The green light through the trees. The valley below, lit by something impossible. The particular silence that follows when every animal in a forest simultaneously understands that something unprecedented is happening.\n\nYou had time to think: this is extraordinary.\n\nThen the dungeon took you.\n\nThe problems you came here to think about did not follow.\n\nEverything else did."
+    }
+  ]
+}
