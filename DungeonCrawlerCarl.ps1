@@ -1355,7 +1355,7 @@ $script:RoomDB = @{
         Chest=@{Locked=$true;Items=@("combat_knife","riot_gear");Gold=35;KeyRequired="lockpick"}
         Interactables=@{
             "car"    = @{ Name="Crushed Sedan"; Desc="A blue sedan, flattened almost completely. The door panel is loose."; Outcome="loot"; Item="scrap_metal"; Text="You pry off the door panel and strip some useful metal. Scrap metal added to inventory." }
-            "britta" = @{ Name="Britta (Injured Crawler)"; Desc="A woman in her thirties, left arm at a bad angle, hiding behind the pickup truck. She has a first aid kit she can't reach with one hand and a determined expression that suggests she's been through worse than a broken arm and is furious about this specific instance."; Outcome="dialogue"; DialogueId="britta_parking" }
+            "britta" = @{ Name="Britta Sorensen"; Desc="A woman in her thirties, hiding behind the pickup truck. Left arm splinted with duct tape. She looks like someone who has decided to survive."; Outcome="dialogue"; DialogueId="britta_parking" }
             "truck"  = @{ Name="Crushed Pickup Truck"; Desc="Provides solid cover against ranged attacks. The truck bed still has a toolbox."; Outcome="loot"; Item="duct_tape"; Text="The toolbox in the truck bed has a roll of duct tape. Practical find." }
         }
         Ambient=@("Britta: 'My name is Britta. If I give you my stuff will you help me?'","A car alarm still bleating somewhere in the wreckage.","Feral dogs circle in the upper level, watching.")
@@ -2075,8 +2075,17 @@ $script:DialogueDB["britta_parking"] = @{
            Response="'I've got a first aid kit, some antiparasitic, and a scrap metal piece I found.' She doesn't sound offended by the question. 'Pragmatic. Fine. I'll trade the antiparasitic for help getting upright and past those dogs.' She holds out her good hand." }
         @{ Text="Sorry, I can't stop."; Outcome="neutral"; GoldCost=0;
            Response="She nods once. No judgment in it. 'Understood. Hey -- the dogs on the upper level change positions every few minutes. There's a gap to the north around every third cycle.' She's already looking at her kit, figuring out the one-handed version. 'Good luck.'" }
-        @{ Text="I'll deal with the dogs."; Outcome="combat"; StartsConflict=$false;
+        @{ Text="I'll deal with the dogs."; Outcome="britta_dogs"; StartsConflict=$false;
            Response="'I was hoping you'd say that.' She leans back against the truck. 'I'll be here. Being medically unimpressed with my current situation.' You go deal with the dogs." }
+    )
+}
+$script:DialogueDB["britta_helped"] = @{
+    Greeting = "Britta looks up. Her arm is still splinted but she's moved to a more defensible position behind the truck. 'You're back,' she says. 'I counted your kills from the sound. Thorough.' She shifts position carefully. 'I've got a route mapped to the market. I can make it if the corridor is clear. I don't suppose you're heading that way?'"
+    Options = @(
+        @{ Text="I'll walk you there."; Outcome="neutral"; Response="'I knew I picked the right crawler to trust.' She stands carefully, keeping weight off the arm. You walk her to the market. It's less heroic than it sounds -- mostly just staying between her and anything that moves. She makes it." }
+        @{ Text="I'm heading a different way."; Outcome="neutral"; Response="'Fair enough.' She hands you a scrap of paper with rough directions. 'Market's north. Stay left past the vending machines. And watch the corners -- the goblins that survived you are going to be nervous.' A pause. 'Nervous goblins explode.'" }
+        @{ Text="What do you know about Floor 2?"; Outcome="neutral"; Response="'Sewer system. At least that's what I'm hearing from crawlers coming back up.' She frowns. 'Nobody's coming back up anymore. That's new. That's a change from an hour ago.' She looks at you seriously. 'Whatever's down there, it's not letting people run.'" }
+        @{ Text="Stay safe, Britta."; Outcome="neutral"; Response="'I'm a nurse in a dungeon with a broken arm,' she says. 'Safe is a word I've temporarily deprioritized.' She almost smiles. 'But thank you. Really.'" }
     )
 }
 
@@ -2112,6 +2121,7 @@ function New-GameState {
         Kills=0; RoomsVisited=0; StepsThisFloor=0
         InCombat=$false; CurrentEnemy=$null; EnemyHP=0; EnemyMaxHP=0
         CombatRound=0; PlayerHiding=$false; DistractActive=$false
+        SpellStunActive=$false; SpellSlowActive=$false
         InDialogue=$false; DialogueId=$null; CurrentNPCEnemy=$null
         TutorialComplete=$false; TutorialStep=0
         QuestLog=@(); CompletedQuests=@()
@@ -2383,6 +2393,7 @@ function Add-Viewers {
 function Lose-Viewers {
     param([int]$Amount=5)
     $script:GS.Viewers = [Math]::Max(0, $script:GS.Viewers - $Amount)
+    if ($script:GS -and $script:GS.Viewers -lt 50) { Grant-Achievement "boring_crawler" }
 }
 
 function Check-SponsorDrop {
@@ -2496,6 +2507,8 @@ function Do-OpenBox {
         return
     }
     $script:GS.LootBoxes--
+    $script:GS.AchieveStat_boxes_opened++
+    if ($script:GS.AchieveStat_boxes_opened -eq 1) { Grant-Achievement "first_box" }
     Write-Terminal "> Opening loot box..." "#BF5AF2"
     Open-LootBox
 }
@@ -2648,17 +2661,55 @@ function Do-Attack {
 }
 
 function Do-CastSpell {
+    param([string]$SpellId = "")
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "Not in combat."; return }
-    if ($g.MP -lt 2) { Write-Warn "Not enough MP! (need 2 MP)"; return }
+    if (-not $g.KnownSpells -or $g.KnownSpells.Count -eq 0) { Write-Warn "You don't know any spells."; return }
+
+    # If no spell specified, open picker
+    if (-not $SpellId) {
+        $ownerWin = $script:CombatWindowRef
+        $SpellId = Show-SpellPicker $ownerWin
+        if (-not $SpellId) { return }   # cancelled
+    }
+
+    $spell = $script:SpellDB[$SpellId]
+    if (-not $spell) { Write-Warn "Unknown spell."; return }
+    if ($g.MP -lt $spell.Cost) { Write-Warn "Not enough MP! ($($spell.Name) costs $($spell.Cost) MP)"; return }
+
     $edef = $script:EnemyDB[$g.CurrentEnemy]
-    $g.MP -= 2
-    $roll = Get-Random -Minimum 1 -Maximum 7
-    $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
-    $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
-    $g.EnemyHP -= $dmg
-    Write-Combat "Spell! You blast $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
-    if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+    $g.MP -= $spell.Cost
+
+    switch ($spell.Type) {
+        "damage" {
+            $roll     = Get-Random -Minimum 1 -Maximum 7
+            $enemyDef = if ($edef.Defense) { $edef.Defense } else { 0 }
+            if ($spell.ArmorPen) { $enemyDef = [Math]::Floor($enemyDef / 2) }
+            $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
+            $g.EnemyHP -= $dmg
+            Write-Combat "$($spell.Name)! You hit $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
+            if ($spell.Effect -eq "slow")  { $script:GS.SpellSlowActive  = $true; Write-Info "$($edef.Name) is slowed!" }
+            if ($spell.Effect -eq "stun" -and (Get-Random -Minimum 1 -Maximum 101) -le 30) {
+                $script:GS.SpellStunActive = $true; Write-Info "$($edef.Name) is stunned and will skip their next attack!"
+            }
+            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+        }
+        "leech" {
+            $roll     = Get-Random -Minimum 1 -Maximum 7
+            $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
+            $dmg  = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
+            $heal = [Math]::Max(1, [Math]::Floor($dmg / 2))
+            $g.EnemyHP -= $dmg
+            $g.HP = [Math]::Min($g.MaxHP, $g.HP + $heal)
+            Write-Combat "Life Leech! You drain $dmg HP from $($edef.Name) and restore $heal HP!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
+            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+        }
+        "heal" {
+            $healAmt = $g.INT * 3
+            $g.HP = [Math]::Min($g.MaxHP, $g.HP + $healAmt)
+            Write-Loot "Mend! You restore $healAmt HP. ($($g.HP)/$($g.MaxHP))"
+        }
+    }
     Enemy-Attack
 }
 
@@ -2667,6 +2718,17 @@ function Enemy-Attack {
     $edef = $script:EnemyDB[$g.CurrentEnemy]
     if (-not $edef) { return }
 
+    # Spell stun check (stun skips enemy turn entirely)
+    if ($g.SpellStunActive) {
+        Write-Info "$($edef.Name) is stunned and cannot act!"
+        $g.SpellStunActive = $false
+        $g.CombatRound++
+        Update-CombatWindow; Update-HUD
+        return
+    }
+    # Spell slow (reduces enemy attack)
+    $slowPenalty = 0
+    if ($g.SpellSlowActive) { $slowPenalty = 2; $g.SpellSlowActive = $false; Write-Info "$($edef.Name)'s movement is sluggish." }
     # Distract dodge chance
     if ($g.DistractActive) {
         if ((Get-Random -Minimum 1 -Maximum 101) -le 40) {
@@ -2691,7 +2753,7 @@ function Enemy-Attack {
     }
 
     $eAtk  = if ($edef.Attack)  { $edef.Attack  } else { 3 }
-    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense))
+    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense) - $slowPenalty)
     $g.HP -= $eDmg
     Write-Combat "$($edef.Name) hits you for $eDmg damage! HP: $($g.HP)/$($g.MaxHP)"
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
@@ -2731,6 +2793,7 @@ function Do-Distract {
 function Do-Flee {
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "You're not in combat."; return }
+    $g.AchieveStat_flee_count++
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.DEX
     if ($roll -ge 13) {
         $edef = $script:EnemyDB[$g.CurrentEnemy]
@@ -2758,7 +2821,13 @@ function Resolve-CombatVictory {
     $goldBase = if ($edef.Gold -is [array]) { Get-Random -Minimum $edef.Gold[0] -Maximum ($edef.Gold[1]+1) } else { if($edef.Gold){$edef.Gold}else{3} }
     $goldGain = $goldBase + (Get-Random -Minimum 0 -Maximum 6)
     $g.EXP += $expGain; $g.Gold += $goldGain; $g.Kills++
-    $g.AchieveStat_boss_kills += if ($edef.IsBoss) { 1 } else { 0 }
+    if ($edef.Type -eq "goblin") { $g.AchieveStat_goblin_kills++ }
+    if ($edef.IsBoss) {
+        $g.AchieveStat_boss_kills++
+        if ($g.AchieveStat_boss_kills -eq 1) { Grant-Achievement "boss_slayer" }
+    }
+    if ($g.Kills -eq 1) { Grant-Achievement "first_blood" }
+    if ($g.HP -le 5 -and $g.HP -gt 0) { Grant-Achievement "survive_low_hp" }
     $script:CombatSummaryText = "$($edef.Name) defeated!`n+$expGain EXP   +$goldGain gold"
     Write-Loot "=== VICTORY! ==="
     Write-Loot "$($edef.Name) defeated!  +$expGain EXP  +$goldGain gold"
@@ -2784,6 +2853,15 @@ function Resolve-CombatVictory {
     $room = $script:RoomDB[$g.CurrentRoom]
     if ($room.Enemies) { $room.Enemies = $room.Enemies | Where-Object { $_ -ne $g.CurrentEnemy } }
     if ($room.BossRoom) { $room.BossDefeated = $true }
+    # Britta quest: dogs cleared
+    if ($g.GameFlags["BrittaWaitingDogs"] -and $g.CurrentRoom -eq "f1_parking_garage" -and $room.Enemies.Count -eq 0) {
+        $g.GameFlags["BrittaWaitingDogs"] = $false
+        $g.GameFlags["BrittaHelped"] = $true
+        $g.Inventory += @("health_potion")
+        Write-Loot "You cleared the dogs. Britta waves you over. 'Here -- from the kit. You earned it.' She hands you a health potion."
+        Write-Info "Britta: 'I've got a plan. Not a good one. But a plan. Talk to me again when things settle.'"
+        Grant-Achievement "helped_britta"
+    }
     $g.InCombat = $false; $g.CurrentEnemy = $null; $g.EnemyHP = 0
     $g.PlayerHiding = $false; $g.DistractActive = $false
     Check-LevelUp
@@ -2820,6 +2898,14 @@ function Check-LevelUp {
     Write-Info "+10 Max HP | +1 $statToGain"
     $g.LootBoxes++
     Write-Loot "You receive a Loot Box for leveling up!"
+    # Spell unlocks
+    if ($g.Level -eq 3 -and "static_bolt" -notin $g.KnownSpells) { $g.KnownSpells += @("static_bolt"); Write-Loot "New spell unlocked: Static Bolt!" }
+    if ($g.Level -eq 5 -and "fireball"    -notin $g.KnownSpells) { $g.KnownSpells += @("fireball");    Write-Loot "New spell unlocked: Fireball!" }
+    if ($g.Level -eq 7 -and "life_leech"  -notin $g.KnownSpells) { $g.KnownSpells += @("life_leech");  Write-Loot "New spell unlocked: Life Leech!" }
+    if ($g.Level -eq 10 -and "mend"       -notin $g.KnownSpells) { $g.KnownSpells += @("mend");        Write-Loot "New spell unlocked: Mend!" }
+    # Level achievements
+    if ($g.Level -eq 5)  { Grant-Achievement "reach_level5" }
+    if ($g.Level -eq 10) { Grant-Achievement "reach_level10" }
     Update-HUD
 }
 
@@ -2830,6 +2916,18 @@ function Trigger-Victory {
     Write-System "Final report: $($script:GS.Level) levels | $($script:GS.Kills) kills | $($script:GS.RoomsVisited) rooms | $($script:GS.ViewerPeak) peak viewers"
 }
 
+
+# ============================================================
+# SPELL DATABASE
+# ============================================================
+$script:SpellDB = @{
+    "bolt"         = @{ Name="Magic Bolt";    Cost=2; Desc="Focused arcane energy. Damage scales with INT.";             Type="damage" }
+    "frost_shard"  = @{ Name="Frost Shard";   Cost=2; Desc="Ice spike. Slows enemy (reduces their attack by 2 next hit)."; Type="damage"; Effect="slow" }
+    "static_bolt"  = @{ Name="Static Bolt";   Cost=2; Desc="Lightning. 30% chance to stun enemy (they skip their attack)."; Type="damage"; Effect="stun" }
+    "fireball"     = @{ Name="Fireball";      Cost=3; Desc="Explosion. Ignores 50% of enemy armor.";                    Type="damage"; ArmorPen=$true }
+    "life_leech"   = @{ Name="Life Leech";    Cost=3; Desc="Drain life from the enemy. You heal for half damage dealt."; Type="leech" }
+    "mend"         = @{ Name="Mend";          Cost=3; Desc="Restore HP equal to INT x 3. Cannot be used offensively.";  Type="heal" }
+}
 
 # ============================================================
 # COMBAT WINDOW (FF-style popup)
@@ -2887,6 +2985,69 @@ function Show-CombatEndScreen {
         } else { $ctrl.lblCEndLevel.Text = "" }
     }
     $ctrl.panelEnd.Visibility = "Visible"
+}
+
+function Show-SpellPicker {
+    param([object]$OwnerWin)
+    $g = $script:GS
+    if (-not $g.KnownSpells -or $g.KnownSpells.Count -eq 0) { Write-Warn "You don't know any spells."; return $null }
+    $spellXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cast Spell" Width="360" Height="320"
+        WindowStyle="None" Background="#0F0818"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <Border BorderBrush="#5E3A8C" BorderThickness="1" Padding="14">
+        <StackPanel>
+            <TextBlock Text="CAST SPELL" Foreground="#BF5AF2" FontFamily="Consolas"
+                       FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+            <ListBox x:Name="lstSpells" Background="#0A0010" Foreground="#E0D0FF"
+                     FontFamily="Consolas" FontSize="12" Height="140"
+                     BorderBrush="#333" BorderThickness="1"/>
+            <TextBlock x:Name="lblSpellDesc" Text="" Foreground="#8E8E93" FontFamily="Consolas"
+                       FontSize="10" TextWrapping="Wrap" Margin="0,6,0,6" Height="50"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnCast"   Content="CAST"   Width="80" Margin="4,0" Padding="8,5"
+                        Background="#5E3A8C" Foreground="#E0D0FF" FontFamily="Consolas" FontWeight="Bold"/>
+                <Button x:Name="btnCancel" Content="CANCEL" Width="80" Margin="4,0" Padding="8,5"
+                        Background="#2A2A2E" Foreground="#E8E8E8" FontFamily="Consolas"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
+"@
+    try { $sw = [Windows.Markup.XamlReader]::Parse($spellXaml) } catch { return $null }
+    $sw.Owner  = $OwnerWin
+    $lst       = $sw.FindName("lstSpells")
+    $lblD      = $sw.FindName("lblSpellDesc")
+    $btnCast   = $sw.FindName("btnCast")
+    $btnCancel = $sw.FindName("btnCancel")
+    $spellIds  = @($g.KnownSpells)
+
+    foreach ($sid in $spellIds) {
+        $sp = $script:SpellDB[$sid]
+        if (-not $sp) { continue }
+        $mpColor = if ($g.MP -ge $sp.Cost) { "" } else { "  [NOT ENOUGH MP]" }
+        [void]$lst.Items.Add("$($sp.Name)  ($($sp.Cost) MP)$mpColor")
+    }
+    $lst.Add_SelectionChanged({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $spellIds.Count) {
+            $sp = $script:SpellDB[$spellIds[$idx]]
+            $lblD.Text = if ($sp -and $sp.Desc) { $sp.Desc } else { "" }
+        }
+    })
+    $btnCast.Add_Click({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $spellIds.Count) {
+            $sp = $script:SpellDB[$spellIds[$idx]]
+            if ($sp -and $g.MP -lt $sp.Cost) { $lblD.Text = "Not enough MP!"; return }
+            $sw.Tag = $spellIds[$idx]; $sw.Close()
+        }
+    })
+    $btnCancel.Add_Click({ $sw.Tag = $null; $sw.Close() })
+    $sw.ShowDialog() | Out-Null
+    return $sw.Tag
 }
 
 function Show-CombatItemPicker {
@@ -3225,6 +3386,8 @@ function Show-CombatWindow {
 function Start-Dialogue {
     param([string]$DialogueId, [string]$SpeakerName=$null)
     $g = $script:GS
+    # Britta post-help dialogue swap
+    if ($DialogueId -eq "britta_parking" -and $g.GameFlags["BrittaHelped"]) { $DialogueId = "britta_helped" }
     $dlg = $script:DialogueDB[$DialogueId]
     if (-not $dlg) { Write-Warn "No dialogue found for: $DialogueId"; return }
 
@@ -3309,6 +3472,13 @@ function Do-Reply {
                     Start-Combat $room.Enemies[0]
                 }
             }
+        }
+        "britta_dogs" {
+            $g.GameFlags["BrittaWaitingDogs"] = $true
+            End-Dialogue
+            Write-Info "The feral dogs are circling nearby. Type ATTACK or click [ATTACK] to fight them."
+            $room = $script:RoomDB[$g.CurrentRoom]
+            if ($room.Enemies -and $room.Enemies.Count -gt 0) { Start-Combat $room.Enemies[0] }
         }
         default   { End-Dialogue }
     }
@@ -3466,6 +3636,7 @@ function Do-Hide {
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.DEX
     if ($roll -ge 12) {
         $g.PlayerHiding = $true
+        $g.AchieveStat_stealth_count++
         Write-Info "You slip into the shadows. Enemies are less likely to hit you."
     } else {
         Write-Warn "Nowhere good to hide here. You settle for standing very still."
@@ -3642,6 +3813,7 @@ function Do-Search {
     $room = $script:RoomDB[$g.CurrentRoom]
 
     # Mark searched so Do-Look and Do-TakeAll can see items
+    if (-not $room.Searched) { $g.AchieveStat_rooms_searched++ }
     $room.Searched = $true
 
     # Add any room items directly to inventory
@@ -3650,6 +3822,7 @@ function Do-Search {
         Write-Loot "You find: $($itemNames -join ', ')"
         foreach ($id in $room.Items) { $g.Inventory += @($id) }
         $room.Items = @()
+        if ($g.Inventory.Count -ge 15) { Grant-Achievement "hoarder" }
     }
 
     # Random search bonus (gold / loot box)
@@ -4559,6 +4732,7 @@ function Show-InventoryWindow {
         $lbi = $lstItems.SelectedItem
         if ($lbi -and $lbi.Tag) {
             Invoke-UseItem $lbi.Tag
+            Grant-Achievement "first_equip"
             Update-HUD
             &$refreshHeader
             &$refreshList
@@ -4664,6 +4838,7 @@ function Show-InventoryWindow {
         }
         $g.Inventory += @($recipe.Result)
         $g.AchieveStat_items_crafted++
+        if ($g.AchieveStat_items_crafted -eq 1) { Grant-Achievement "first_craft" }
         $resultItem = $script:ItemDB[$recipe.Result]
         Write-Loot "Crafted: $(if($resultItem){$resultItem.Name}else{$recipe.Result})!"
         if ($g.AchieveStat_items_crafted -eq 1 -and $recipe.Result -eq "jugs_o_boom") { Grant-Achievement "jug_o_boom" }
