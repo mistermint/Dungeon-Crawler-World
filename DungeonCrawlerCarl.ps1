@@ -2516,14 +2516,14 @@ function Enter-Room {
 
     # Items in room
     if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { $script:ItemDB[$_].Name ?? $_ }
+        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
         Write-Loot "Items here: $($itemNames -join ', ')"
     }
 
     # Enemies
     $enemies = Get-RoomEnemies $RoomId
     if ($enemies.Count -gt 0) {
-        $enemyNames = $enemies | ForEach-Object { $script:EnemyDB[$_].Name ?? $_ }
+        $enemyNames = $enemies | ForEach-Object { $e = $script:EnemyDB[$_]; if ($e -and $e.Name) { $e.Name } else { $_ } }
         Write-Combat "Enemies: $($enemyNames -join ', ')"
         # Auto-start combat with first enemy
         $firstEnemy = $enemies[0]
@@ -2532,7 +2532,7 @@ function Enter-Room {
         # Check for Mordecai in safe room
         if ($room.HasMordecai -and $room.IsSafeRoom) {
             $floor = $g.Floor
-            $form = $script:MordecaiForms[$floor] ?? $script:MordecaiForms[1]
+            $form = if ($script:MordecaiForms[$floor]) { $script:MordecaiForms[$floor] } else { $script:MordecaiForms[1] }
             Write-Mordecai "You find me in here, do you? Good. We should talk."
             Write-Info "(Type TALK MORDECAI or click TALK to speak with Mordecai)"
         }
@@ -2701,10 +2701,10 @@ function Resolve-CombatVictory {
     # Drop items
     if ($edef.Drops -and $edef.Drops.Count -gt 0) {
         foreach ($drop in $edef.Drops) {
-            if ((Get-Random -Minimum 1 -Maximum 101) -le ($drop.Chance ?? 50)) {
+            if ((Get-Random -Minimum 1 -Maximum 101) -le $(if ($null -ne $drop.Chance) { $drop.Chance } else { 50 })) {
                 $g.Inventory += @($drop.Item)
                 $item = $script:ItemDB[$drop.Item]
-                Write-Loot "Dropped: $($item.Name ?? $drop.Item)"
+                Write-Loot "Dropped: $(if ($item -and $item.Name) { $item.Name } else { $drop.Item })"
             }
         }
     }
@@ -2932,7 +2932,7 @@ function Do-TalkToMordecai {
         return
     }
     $g.AchieveStat_mordecai_talks++
-    $form = $script:MordecaiForms[$floor] ?? $script:MordecaiForms[1]
+    $form = if ($script:MordecaiForms[$floor]) { $script:MordecaiForms[$floor] } else { $script:MordecaiForms[1] }
     Write-Sep
     Write-Terminal "[Mordecai - $($form.Form)]: $($dlg.Greeting)" $form.Color
     Write-Sep
@@ -3106,7 +3106,7 @@ function Do-Look {
     Write-Info "Exits: $exitList"
     # Items
     if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { ($script:ItemDB[$_]).Name ?? $_ }
+        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
         Write-Loot "On the ground: $($itemNames -join ', ')"
     } else { Write-Info "No items visible." }
     # Enemies
@@ -3135,7 +3135,10 @@ function Do-Inventory {
             Write-Terminal "  • $name$desc" "#E8E8E8"
         }
     }
-    Write-Info "Equipped: Weapon=$($g.EquippedWeapon ?? '--') | Armor=$($g.EquippedArmor ?? '--') | Accessory=$($g.EquippedAccessory ?? '--')"
+    $wpn = if ($g.EquippedWeapon) { $g.EquippedWeapon } else { "--" }
+    $arm = if ($g.EquippedArmor) { $g.EquippedArmor } else { "--" }
+    $acc = if ($g.EquippedAccessory) { $g.EquippedAccessory } else { "--" }
+    Write-Info "Equipped: Weapon=$wpn | Armor=$arm | Accessory=$acc"
     Write-Sep
 }
 
@@ -3173,7 +3176,7 @@ function Do-TakeAll {
     foreach ($id in $room.Items) {
         $item = $script:ItemDB[$id]
         $g.Inventory += @($id)
-        Write-Loot "Picked up: $($item.Name ?? $id)"
+        Write-Loot "Picked up: $(if ($item -and $item.Name) { $item.Name } else { $id })"
     }
     $room.Items = @()
     Update-HUD
@@ -3314,11 +3317,11 @@ function Load-ExternalData {
                     @{
                         Text          = $_.Text
                         Outcome       = $_.Outcome
-                        GoldCost      = [int]($_.GoldCost ?? 0)
+                        GoldCost      = [int](if ($null -ne $_.GoldCost) { $_.GoldCost } else { 0 })
                         StatRequired  = $_.StatRequired
                         StatMin       = if ($_.StatMin) { [int]$_.StatMin } else { $null }
                         Response      = $_.Response
-                        StartsConflict= [bool]($_.StartsConflict ?? $false)
+                        StartsConflict= [bool](if ($null -ne $_.StartsConflict) { $_.StartsConflict } else { $false })
                     }
                 })
                 $script:DialogueDB[$id] = @{ Greeting = $entry.Greeting; Options = $opts }
@@ -3541,8 +3544,7 @@ function Render-MiniMap {
 
             # Draw connections (thin lines to each exit neighbor that is also on this floor)
             if ($visited -or $revealed) {
-                $dirOffsets = @{ north=@(0,-1); south=@(0,1); east=@(1,0); west=@(-1,0) }
-                foreach ($dir in $room.Exits.Keys) {
+                    foreach ($dir in $room.Exits.Keys) {
                     $nid = $room.Exits[$dir]
                     $npos = $script:RoomPositions[$nid]
                     if (-not $npos) { continue }
@@ -3627,12 +3629,12 @@ function Invoke-GameCommand {
     param([string]$Raw)
     $g = $script:GS
     if (-not $g) { return }
-    $input = $Raw.Trim().ToLower()
-    if ($input -eq "") { return }
+    $cmd = $Raw.Trim().ToLower()
+    if ($cmd -eq "") { return }
 
     # In-dialogue: only REPLY commands matter
     if ($g.InDialogue) {
-        if ($input -match "^reply\s+(\d)$" -or $input -match "^(\d)$") {
+        if ($cmd -match "^reply\s+(\d)$" -or $cmd -match "^(\d)$") {
             $num = [int]($Matches[1])
             Do-Reply $num
         } else {
@@ -3642,43 +3644,43 @@ function Invoke-GameCommand {
     }
 
     # Movement shortcuts
-    if ($input -in @("n","north"))  { Do-Move "north"; return }
-    if ($input -in @("s","south"))  { Do-Move "south"; return }
-    if ($input -in @("e","east"))   { Do-Move "east";  return }
-    if ($input -in @("w","west"))   { Do-Move "west";  return }
-    if ($input -in @("u","up"))     { Do-Move "up";    return }
-    if ($input -in @("d","down"))   { Do-Move "down";  return }
+    if ($cmd -in @("n","north"))  { Do-Move "north"; return }
+    if ($cmd -in @("s","south"))  { Do-Move "south"; return }
+    if ($cmd -in @("e","east"))   { Do-Move "east";  return }
+    if ($cmd -in @("w","west"))   { Do-Move "west";  return }
+    if ($cmd -in @("u","up"))     { Do-Move "up";    return }
+    if ($cmd -in @("d","down"))   { Do-Move "down";  return }
 
     # Combat shortcuts while in combat
     if ($g.InCombat) {
-        if ($input -in @("a","attack"))  { Do-Attack;        return }
-        if ($input -in @("c","spell","cast","magic")) { Do-CastSpell; return }
-        if ($input -in @("f","flee","run"))  { Do-Flee;      return }
-        if ($input -eq "taunt")          { Do-Taunt;         return }
-        if ($input -eq "distract")       { Do-Distract;      return }
-        if ($input -eq "hide")           { Do-Hide;          return }
-        if ($input -eq "talk") {
+        if ($cmd -in @("a","attack"))  { Do-Attack;        return }
+        if ($cmd -in @("c","spell","cast","magic")) { Do-CastSpell; return }
+        if ($cmd -in @("f","flee","run"))  { Do-Flee;      return }
+        if ($cmd -eq "taunt")          { Do-Taunt;         return }
+        if ($cmd -eq "distract")       { Do-Distract;      return }
+        if ($cmd -eq "hide")           { Do-Hide;          return }
+        if ($cmd -eq "talk") {
             $edef = $script:EnemyDB[$g.CurrentEnemy]
             if ($edef -and $edef.CanTalk) { Do-Talk ""; return }
             Write-Warn "This enemy doesn't want to talk."
             return
         }
-        if ($input -eq "item" -or $input -eq "use") { Do-UseItemSelected; return }
+        if ($cmd -eq "item" -or $cmd -eq "use") { Do-UseItemSelected; return }
     }
 
     # Dialogue replies
-    if ($input -match "^reply\s+(\d)$") { Do-Reply ([int]$Matches[1]); return }
+    if ($cmd -match "^reply\s+(\d)$") { Do-Reply ([int]$Matches[1]); return }
 
     # Movement
-    if ($input -match "^(?:go|move)\s+(\w+)$") { Do-Move $Matches[1]; return }
+    if ($cmd -match "^(?:go|move)\s+(\w+)$") { Do-Move $Matches[1]; return }
 
     # Look / examine
-    if ($input -in @("look","l","examine")) { Do-Look; return }
-    if ($input -match "^(?:look|examine)\s+(.+)$") { Do-Examine $Matches[1]; return }
+    if ($cmd -in @("look","l","examine")) { Do-Look; return }
+    if ($cmd -match "^(?:look|examine)\s+(.+)$") { Do-Examine $Matches[1]; return }
 
     # Interact
-    if ($input -match "^interact(?:\s+(.+))?$") { Do-Interact ($Matches[1] ?? ""); return }
-    if ($input -match "^(?:use|open|search)\s+(.+)$") {
+    if ($cmd -match "^interact(?:\s+(.+))?$") { Do-Interact $(if ($Matches[1]) { $Matches[1] } else { "" }); return }
+    if ($cmd -match "^(?:use|open|search)\s+(.+)$") {
         $target = $Matches[1]
         if ($target -eq "box" -or $target -eq "loot box") { Do-OpenBox; return }
         Do-Interact $target
@@ -3686,46 +3688,46 @@ function Invoke-GameCommand {
     }
 
     # Talk
-    if ($input -eq "talk") { Do-Talk ""; return }
-    if ($input -match "^talk\s+(.+)$") { Do-Talk $Matches[1]; return }
+    if ($cmd -eq "talk") { Do-Talk ""; return }
+    if ($cmd -match "^talk\s+(.+)$") { Do-Talk $Matches[1]; return }
 
     # Hide / scout
-    if ($input -eq "hide")  { Do-Hide;  return }
-    if ($input -eq "scout") { Do-Scout; return }
+    if ($cmd -eq "hide")  { Do-Hide;  return }
+    if ($cmd -eq "scout") { Do-Scout; return }
 
     # Taunt / distract (outside combat too, for laughs)
-    if ($input -eq "taunt")    { Do-Taunt;    return }
-    if ($input -eq "distract") { Do-Distract; return }
+    if ($cmd -eq "taunt")    { Do-Taunt;    return }
+    if ($cmd -eq "distract") { Do-Distract; return }
 
     # Inventory management
-    if ($input -in @("i","inv","inventory")) { Do-Inventory; return }
-    if ($input -in @("stats","s","stat","status","c","character")) { Do-Stats; return }
-    if ($input -match "^(?:use|equip)\s+(.+)$") {
+    if ($cmd -in @("i","inv","inventory")) { Do-Inventory; return }
+    if ($cmd -in @("stats","s","stat","status","c","character")) { Do-Stats; return }
+    if ($cmd -match "^(?:use|equip)\s+(.+)$") {
         $itemName = $Matches[1]
-        $found = $g.Inventory | Where-Object { ($script:ItemDB[$_].Name ?? $_).ToLower() -match $itemName } | Select-Object -First 1
+        $found = $g.Inventory | Where-Object { $n = $script:ItemDB[$_]; $nm = if ($n -and $n.Name) { $n.Name } else { $_ }; $nm.ToLower() -match $itemName } | Select-Object -First 1
         if ($found) { Invoke-UseItem $found }
         else { Write-Warn "No item matching '$itemName' in inventory." }
         return
     }
-    if ($input -in @("take","take all","get all","pickup")) { Do-TakeAll; return }
+    if ($cmd -in @("take","take all","get all","pickup")) { Do-TakeAll; return }
 
     # Room actions
-    if ($input -in @("search","loot")) { Do-Search; return }
-    if ($input -in @("rest","sleep","r"))  { Do-Rest;  return }
-    if ($input -in @("map","m"))           { Do-Map;   return }
-    if ($input -in @("quests","q","quest","journal")) { Do-Quests; return }
-    if ($input -in @("achievements","achieve","ach","a")) { Do-Achievements; return }
-    if ($input -in @("craft"))             { Do-Craft; return }
+    if ($cmd -in @("search","loot")) { Do-Search; return }
+    if ($cmd -in @("rest","sleep","r"))  { Do-Rest;  return }
+    if ($cmd -in @("map","m"))           { Do-Map;   return }
+    if ($cmd -in @("quests","q","quest","journal")) { Do-Quests; return }
+    if ($cmd -in @("achievements","achieve","ach","a")) { Do-Achievements; return }
+    if ($cmd -in @("craft"))             { Do-Craft; return }
 
     # Loot boxes
-    if ($input -in @("open box","loot box","open loot box")) { Do-OpenBox; return }
+    if ($cmd -in @("open box","loot box","open loot box")) { Do-OpenBox; return }
 
     # Save/load
-    if ($input -in @("save"))  { Save-Game; return }
-    if ($input -in @("load"))  { Load-Game; return }
+    if ($cmd -in @("save"))  { Save-Game; return }
+    if ($cmd -in @("load"))  { Load-Game; return }
 
     # Help
-    if ($input -in @("help","?","h")) {
+    if ($cmd -in @("help","?","h")) {
         Write-Sep
         Write-Info "=== COMMANDS ==="
         Write-Terminal "  Movement:  N S E W U D  (or full words)" "#A0A0A0"
@@ -3744,7 +3746,7 @@ function Invoke-GameCommand {
     $fallbacks = @(
         "The dungeon logs your confusion for later study.",
         "Invalid command. The AI notes this. You don't want the AI to note things.",
-        "You attempt '$($input.Substring(0,[Math]::Min(20,$input.Length)))'. Nothing happens. Embarrassingly.",
+        "You attempt '$($cmd.Substring(0,[Math]::Min(20,$cmd.Length)))'. Nothing happens. Embarrassingly.",
         "The dungeon has no subroutine for that. Try HELP."
     )
     Write-Warn $fallbacks[(Get-Random -Minimum 0 -Maximum $fallbacks.Count)]
