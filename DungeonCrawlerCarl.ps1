@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # DUNGEON CRAWLER WORLD - Terminal v3.0
 # Desperation Engine | Powered by the Borant Corporation
 # Revision: Full mechanics overhaul - NPC depth, corrected stats,
@@ -2219,7 +2219,7 @@ function Write-Mordecai {
 }
 
 function Write-Sep {
-    Write-Terminal ("─" * 60) "#333333"
+    Write-Terminal ("-" * 60) "#333333"
 }
 
 # ============================================================
@@ -2511,7 +2511,7 @@ function Enter-Room {
     }
 
     # Exits
-    $exitList = ($room.Exits.Keys | ForEach-Object { "$_ → $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
+    $exitList = ($room.Exits.Keys | ForEach-Object { "$_ -> $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
     Write-Info "Exits: $exitList"
 
     # Items in room
@@ -2629,7 +2629,7 @@ function Enemy-Attack {
         }
     }
 
-    $eDmg = [Math]::Max(0, $edef.ATK + (Get-Random -Minimum -2 -Maximum 3) - Get-TotalDefense)
+    $eDmg = [Math]::Max(0, $edef.ATK + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense))
     $g.HP -= $eDmg
     Write-Combat "$($edef.Name) hits you for $eDmg damage! HP: $($g.HP)/$($g.MaxHP)"
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
@@ -2643,10 +2643,10 @@ function Do-Taunt {
     $edef = $script:EnemyDB[$g.CurrentEnemy]
     Add-Viewers -Min 10 -Max 40
     Write-Info "The crowd loves it. +viewers."
-    # Taunt increases enemy aggression — slight damage boost to them, but enemy focuses ONLY you
+    # Taunt increases enemy aggression - slight damage boost to them, but enemy focuses ONLY you
     Write-Combat "You taunt $($edef.Name)! They focus entirely on you. Dangerous."
     # Enemy immediately attacks in rage
-    $eDmg = [Math]::Max(1, $edef.ATK + (Get-Random -Minimum 1 -Maximum 5) - Get-TotalDefense)
+    $eDmg = [Math]::Max(1, $edef.ATK + (Get-Random -Minimum 1 -Maximum 5) - (Get-TotalDefense))
     $g.HP -= $eDmg
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
     Write-Combat "Enraged, $($edef.Name) hits you for $eDmg! HP: $($g.HP)/$($g.MaxHP)"
@@ -2708,7 +2708,7 @@ function Resolve-CombatVictory {
             }
         }
     }
-    # Boss map drop — auto-applied to mini-map
+    # Boss map drop - auto-applied to mini-map
     if ($edef.IsBoss -and $edef.BossType) {
         $mapId = $script:MapDropItems[$edef.BossType]
         if ($mapId) {
@@ -2983,7 +2983,7 @@ function Do-Interact {
             if ($inter.DialogueId) { Start-Dialogue $inter.DialogueId $inter.Name }
         }
         "bribe_option" {
-            Write-Info "Cost: $($inter.GoldCost)g — $($inter.Text)"
+            Write-Info "Cost: $($inter.GoldCost)g - $($inter.Text)"
             Write-Info "(Type REPLY 1 to pay, REPLY 2 to decline)"
             $script:GS.InDialogue = $true
             $script:GS.DialogueId = "__bribe_$key"
@@ -3034,7 +3034,7 @@ function Do-Scout {
         $items = Get-RoomItems $destId
         $hostileStr  = if ($enemies.Count -gt 0) { "Hostiles: $($enemies.Count)" } else { "Clear" }
         $itemStr     = if ($items.Count -gt 0) { "Items: $($items.Count)" } else { "Empty" }
-        Write-Terminal "  $($dir.ToUpper()): $($dest.Name) — $hostileStr | $itemStr" "#A0D0A0"
+        Write-Terminal "  $($dir.ToUpper()): $($dest.Name) - $hostileStr | $itemStr" "#A0D0A0"
     }
 }
 
@@ -3102,7 +3102,7 @@ function Do-Look {
     Write-Terminal $room.Name "#FFD60A" $true
     Write-Terminal $room.Desc "#C8C8C8" $true
     # Exits
-    $exitList = ($room.Exits.Keys | ForEach-Object { "$_ → $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
+    $exitList = ($room.Exits.Keys | ForEach-Object { "$_ -> $($script:RoomDB[$room.Exits[$_]].Name)" }) -join ", "
     Write-Info "Exits: $exitList"
     # Items
     if ($room.Items -and $room.Items.Count -gt 0) {
@@ -3131,8 +3131,8 @@ function Do-Inventory {
         foreach ($id in $g.Inventory) {
             $item = $script:ItemDB[$id]
             $name = if ($item) { $item.Name } else { $id }
-            $desc = if ($item -and $item.Desc) { " — $($item.Desc)" } else { "" }
-            Write-Terminal "  • $name$desc" "#E8E8E8"
+            $desc = if ($item -and $item.Desc) { " - $($item.Desc)" } else { "" }
+            Write-Terminal "  * $name$desc" "#E8E8E8"
         }
     }
     $wpn = if ($g.EquippedWeapon) { $g.EquippedWeapon } else { "--" }
@@ -3144,7 +3144,7 @@ function Do-Inventory {
 
 function Do-Stats {
     $g = $script:GS
-    Write-Sep; Write-Info "=== STATS: $($g.PlayerName) — Level $($g.Level) ==="
+    Write-Sep; Write-Info "=== STATS: $($g.PlayerName) - Level $($g.Level) ==="
     Write-Terminal "  HP: $($g.HP)/$($g.MaxHP)  |  MP: $($g.MP)/$($g.MaxMP)" "#E8E8E8"
     Write-Terminal "  STR:$($g.STR)  DEX:$($g.DEX)  INT:$($g.INT)  CON:$($g.CON)  CHA:$($g.CHA)  LCK:$($g.LCK)" "#E8E8E8"
     Write-Terminal "  ATK:$(Get-TotalAttack)  DEF:$(Get-TotalDefense)  SPD:$(Get-TotalSpeed)" "#A0D0A0"
@@ -3208,7 +3208,7 @@ function Do-Search {
 
 function Do-Map {
     $g = $script:GS
-    Write-Sep; Write-Info "=== MAP — Floor $($g.Floor) ==="
+    Write-Sep; Write-Info "=== MAP - Floor $($g.Floor) ==="
     $floorRooms = $script:RoomDB.Keys | Where-Object { $script:RoomDB[$_].Floor -eq $g.Floor } | Sort-Object
     foreach ($rId in $floorRooms) {
         $r = $script:RoomDB[$rId]
@@ -3243,7 +3243,7 @@ function Do-Craft {
 function Do-Move {
     param([string]$Direction)
     $g = $script:GS
-    if ($g.InCombat) { Write-Warn "Can't move — you're in combat! FLEE first."; return }
+    if ($g.InCombat) { Write-Warn "Can't move - you're in combat! FLEE first."; return }
     if ($g.InDialogue) { Write-Warn "Finish the conversation first."; return }
     $room = $script:RoomDB[$g.CurrentRoom]
     if (-not $room.Exits[$Direction]) {
@@ -3345,7 +3345,7 @@ function Load-ExternalData {
             })
         }
     } catch {
-        # JSON parse error — fall back to inline data silently
+        # JSON parse error - fall back to inline data silently
     }
 }
 
@@ -3355,16 +3355,16 @@ function Load-ExternalData {
 # ============================================================
 # Room type color mapping for mini-map
 $script:MapRoomColors = @{
-    "safe"       = "#30D158"   # green — safe room
-    "tutorial"   = "#30D158"   # green — guild/tutorial
-    "boss"       = "#FF453A"   # red   — boss room
-    "special"    = "#BF5AF2"   # purple — Desperado Club, Club Vanquisher, etc.
-    "stairwell"  = "#FFD60A"   # yellow — floor exit
-    "loot"       = "#FFCC00"   # gold  — loot-heavy room
-    "default"    = "#3A3A3A"   # dark  — regular visited
-    "revealed"   = "#252525"   # very dark — revealed but not visited
-    "unknown"    = "#111111"   # nearly black — unknown
-    "current"    = "#64D2FF"   # cyan  — current location
+    "safe"       = "#30D158"   # green - safe room
+    "tutorial"   = "#30D158"   # green - guild/tutorial
+    "boss"       = "#FF453A"   # red   - boss room
+    "special"    = "#BF5AF2"   # purple - Desperado Club, Club Vanquisher, etc.
+    "stairwell"  = "#FFD60A"   # yellow - floor exit
+    "loot"       = "#FFCC00"   # gold  - loot-heavy room
+    "default"    = "#3A3A3A"   # dark  - regular visited
+    "revealed"   = "#252525"   # very dark - revealed but not visited
+    "unknown"    = "#111111"   # nearly black - unknown
+    "current"    = "#64D2FF"   # cyan  - current location
 }
 
 # Auto-generate X/Y grid positions for all rooms using BFS from floor start rooms
@@ -3732,7 +3732,7 @@ function Invoke-GameCommand {
         Write-Info "=== COMMANDS ==="
         Write-Terminal "  Movement:  N S E W U D  (or full words)" "#A0A0A0"
         Write-Terminal "  Combat:    ATTACK / SPELL / FLEE / TAUNT / DISTRACT / HIDE" "#A0A0A0"
-        Write-Terminal "  Talk:      TALK [name]  — REPLY 1-4 to respond" "#A0A0A0"
+        Write-Terminal "  Talk:      TALK [name]  - REPLY 1-4 to respond" "#A0A0A0"
         Write-Terminal "  World:     LOOK / INTERACT [thing] / EXAMINE [thing] / SCOUT / SEARCH" "#A0A0A0"
         Write-Terminal "  Items:     INVENTORY / USE [item] / EQUIP [item] / TAKE" "#A0A0A0"
         Write-Terminal "  Rest:      REST (safe rooms only)" "#A0A0A0"
@@ -3759,7 +3759,7 @@ function Show-OpeningSequence {
     param([System.Windows.Window]$Owner)
     $seq = $script:OpeningSequences[(Get-Random -Minimum 0 -Maximum $script:OpeningSequences.Count)]
     $dlg = New-Object System.Windows.Window
-    $dlg.Title = "Dungeon Crawler World — Before"
+    $dlg.Title = "Dungeon Crawler World - Before"
     $dlg.Width = 680; $dlg.Height = 520
     $dlg.WindowStartupLocation = "CenterOwner"
     $dlg.Owner = $Owner
@@ -3973,7 +3973,7 @@ function Start-NewGame {
 
 
 # ============================================================
-# BOOTSTRAP — WINDOW + BUTTON WIRING
+# BOOTSTRAP - WINDOW + BUTTON WIRING
 # ============================================================
 $script:Window = $null
 $script:UI_Terminal = $null
@@ -4092,11 +4092,11 @@ $script:Window.Add_KeyDown({
 # SPLASH SCREEN
 # ============================================================
 $script:Window.Add_Loaded({
-    Write-Terminal "╔══════════════════════════════════════════════════╗" "#FF3B30"
-    Write-Terminal "║          DUNGEON CRAWLER WORLD  S.14             ║" "#FF3B30"
-    Write-Terminal "║                                                  ║" "#FF3B30"
-    Write-Terminal "║       A Borant Corporation Experience™            ║" "#8E8E93"
-    Write-Terminal "╚══════════════════════════════════════════════════╝" "#FF3B30"
+    Write-Terminal "+==================================================+" "#FF3B30"
+    Write-Terminal "|          DUNGEON CRAWLER WORLD  S.14             |" "#FF3B30"
+    Write-Terminal "|                                                  |" "#FF3B30"
+    Write-Terminal "|       A Borant Corporation Experience(tm)            |" "#8E8E93"
+    Write-Terminal "+==================================================+" "#FF3B30"
     Write-Terminal "" "#E8E8E8"
     Write-Terminal "  Earth is gone. The dungeon is here. So are you." "#C8C8C8"
     Write-Terminal "  Approximately 142 people are already watching." "#8E8E93"
