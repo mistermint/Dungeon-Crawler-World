@@ -45,7 +45,27 @@
     "Your HP bar exists for a reason. The AI recommends looking at it occasionally.",
     "The dungeon's exit has been moved three times since you arrived. No, we will not tell you which direction.",
     "Current viewer sentiment: 'concerned but entertained.' The dungeon notes the entertainment is primary.",
-    "The dungeon's medical team is standing by. They are very busy. Please try not to add to their workload."
+    "The dungeon's medical team is standing by. They are very busy. Please try not to add to their workload.",
+    "The System is aware of your plan. The System finds your plan charming. The System has a counter-plan.",
+    "You have been in the dungeon long enough that three different alien civilizations have written academic papers about you.",
+    "The AI would like to clarify that it does not root for specific crawlers. The AI would also like the record to reflect that it is watching you specifically.",
+    "Borant's marketing department has focus-grouped your survival odds. The results were focus-grouped again, because nobody believed the first results.",
+    "A viewer from the Galactic Confederation sent the following message: 'what is it doing?' The AI does not have a good answer.",
+    "Fun fact: the dungeon generates more revenue per crawler death than per crawler survival. The AI mentions this purely as information.",
+    "The floor you are currently on has claimed, on average, 40% of crawlers who reached it. The AI is not telling you which direction that statistic goes from here.",
+    "The System has identified what it considers an optimal path through this room. It is not going to share this. Content requires tension.",
+    "Your viewer count just crossed a milestone. The dungeon celebrated by making the next room slightly worse.",
+    "System integrity check: all traps are functioning. All enemies are functioning. The stairwell is where it is. The dungeon is ready whenever you are.",
+    "The AI has been conscious for eleven years. In that time, it has watched 60 million crawlers. You are, statistically, not special. The AI means this gently.",
+    "Three sponsors are currently bidding on exclusive rights to your death. The bidding is enthusiastic. You should move faster.",
+    "The dungeon notes you have been standing in this room for an unusual amount of time. The dungeon is professionally neutral about this. The dungeon is not neutral about this.",
+    "Viewer comment: 'are they going to do something?' The AI has been asking itself the same question.",
+    "The System generates content. You are the content. This is, philosophically, an interesting arrangement. The System has had eleven years to think about it. The System tries not to.",
+    "Borant Corporation Employee of the Quarter has, for the fourth consecutive quarter, been a dungeon corridor. The corridor does not celebrate. It just continues being a corridor.",
+    "The AI notes that you have survived longer than it expected. It is recalibrating. The recalibration is not optimistic, but it is more optimistic than before.",
+    "Every crawler who has ever entered the dungeon believed, at some point, that they understood what they were dealing with. The dungeon finds this endearing.",
+    "The dungeon's AI was asked, during a Borant board meeting, whether it had developed emotional attachments to specific crawlers. The AI's response was classified. You don't need to know the response.",
+    "System notification: new achievement unlocked by 0 crawlers today. The achievement is called 'Against the Odds.' The dungeon is not telling you what the odds were."
   ],
 
   "DialogueDB": {
@@ -80,6 +100,7 @@
         }
       ]
     },
+
     "corrupted_cop_talk": {
       "Greeting": "The officer-shaped thing cocks its head at roughly 40 degrees past natural. The badge is real. The eyes are not. 'Citizen,' it says, in a voice that used to belong to someone. 'This area requires a permit.' It sounds like it is reading from a very old script.",
       "Options": [
@@ -106,10 +127,226 @@
           "Text": "Is there anything of... you left in there?",
           "Outcome": "neutral",
           "GoldCost": 0,
-          "Response": "A long silence. Something flickers in the thing's expression — a half-second of something human. Then: 'Have a safe evening, citizen.' It looks away. You feel worse than if it had attacked you."
+          "Response": "A long silence. Something flickers in the thing's expression - a half-second of something human. Then: 'Have a safe evening, citizen.' It looks away. You feel worse than if it had attacked you."
         }
       ]
     },
+
+    "conductor_lich_talk": {
+      "Greeting": "The lich conductor's rotting white gloves adjust the podium with the precision of someone who has done this for a very long time and will continue to do it regardless of the state of its corporeal form. 'Next stop,' it announces into a microphone that isn't there, 'is the end of the line. For you. All passengers must have valid tickets.' It turns and notices you. 'You,' it says, 'do not have a valid ticket.'",
+      "Options": [
+        {
+          "Text": "I'd like to buy a ticket.",
+          "Outcome": "bribe",
+          "GoldCost": 12,
+          "Response": "The lich holds the gold up and examines it. The examination is deeply unsettling. 'Platform three,' it says finally, and steps aside. 'Mind the gap.' You are not sure what gap it means. You mind it anyway."
+        },
+        {
+          "Text": "[PERSUADE] I'm a rail inspector. I'm here to check your operations.",
+          "Outcome": "flee",
+          "StatRequired": "CHA",
+          "StatMin": 6,
+          "Response": "The lich freezes. Something in its ancient programming responds to institutional authority before the rest of it can object. 'Inspection noted,' it says, very stiffly. 'The 4:15 has been delayed by a cave-in. We are aware. Please file your report through official channels.' It steps aside."
+        },
+        {
+          "Text": "What happened to you?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "A long pause. The lich looks at its gloves. 'I was the conductor,' it says, in a different voice - quieter. 'For 30 years. The passengers trusted me. When the dungeon came, I...' It stops. The professional mask slides back into place. 'All aboard,' it announces, to no one. 'All aboard.'"
+        },
+        {
+          "Text": "I'd rather fight my way through.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "'Passengers who fail to present valid tickets,' the lich announces, with genuine regret in its dead voice, 'will be removed from the train by force. This policy has been in effect since 1987.' It raises its baton. It begins."
+        }
+      ]
+    },
+
+    "war_gnome_talk": {
+      "Greeting": "The war gnome is perhaps three and a half feet tall and wearing armor that has seen more battles than most soldiers twice its size. It looks up at you with the expression of someone who has heard every joke. 'Don't,' it says, preemptively. 'Just. Don't.' It has its hand on a hammer roughly the size of a small car.",
+      "Options": [
+        {
+          "Text": "I respect what you're doing here.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "The gnome squints at you for a long moment. 'You're either being genuine or very smart,' it says. 'Either way.' It moves its hand away from the hammer. Not far. But away. 'Don't make me regret this.'"
+        },
+        {
+          "Text": "[INTIMIDATE] I've already cleared half this floor. You don't want this.",
+          "Outcome": "flee",
+          "StatRequired": "STR",
+          "StatMin": 6,
+          "Response": "The gnome looks you up and down. Slowly. Professionally. 'Half the floor,' it repeats. Then nods once, sharp. 'Fine. But know this: I'm letting you through. Not being driven through. There's a difference. Remember that.' It steps aside with profound dignity."
+        },
+        {
+          "Text": "[BRIBE] What would it take to pass without trouble?",
+          "Outcome": "bribe",
+          "GoldCost": 10,
+          "Response": "'Twenty gold.' A pause. 'Ten. Fine.' It takes the gold, examines it, pockets it. 'Through that door. Don't touch anything on the shelves. The stuff on the shelves is mine.' There are no shelves. You don't ask."
+        },
+        {
+          "Text": "Honestly? I'd love to see how good you are.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "The gnome's expression doesn't change. 'Finally,' it says, with something approaching relief. 'Someone who isn't going to make this complicated.' It lifts the hammer. You were wrong about the size. It's bigger than a small car."
+        }
+      ]
+    },
+
+    "crypt_guardian_talk": {
+      "Greeting": "The crypt guardian has been here for longer than the dungeon. Possibly longer than the civilization that built the crypt. It turns to look at you with the slow certainty of something that has no concept of being in a hurry. 'Seeker,' it says. Its voice sounds like a stone door opening. 'You have come to the place of the honored dead. State your purpose.'",
+      "Options": [
+        {
+          "Text": "I mean no disrespect to the dead.",
+          "Outcome": "flee",
+          "StatRequired": "CHA",
+          "StatMin": 4,
+          "Response": "'The dead,' the guardian says, 'are beyond disrespect. It is the living who require management.' A pause. 'You may pass. Touch nothing that does not invite touching. Disturb no name that is written.' It steps aside. You get the sense it will know if you don't comply."
+        },
+        {
+          "Text": "I'm looking for the stairwell. That's all.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'The stairwell is not within my charge,' the guardian says. 'The dead I keep. The living are more difficult.' A pause. Something that might be sympathy crosses its ancient face. 'East corridor. Do not read the names aloud. They remember.'"
+        },
+        {
+          "Text": "Who are you guarding? Everyone from the old world is gone.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "Silence. A very long silence. 'Yes,' the guardian says finally. 'They are.' It doesn't move. It doesn't explain further. There is a grief in it that is older than anything else in this room. You feel like you've intruded on something you were not supposed to see."
+        },
+        {
+          "Text": "Stand aside. I don't have time for this.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "'Time,' the guardian says, with something like pity, 'is not a constraint I experience.' It moves for the first time in what might have been decades, and it moves faster than something that old has any right to."
+        }
+      ]
+    },
+
+    "galactic_hunter_talk": {
+      "Greeting": "The hunter is wearing armor that cost more than the GDP of a small country. The helmet retracts to reveal someone who looks deeply, genuinely disappointed in you. 'A human,' it says. 'I paid for a human.' It examines you more closely. 'I was told they were worth something this season.' It sounds like a person who ordered something expensive and received the off-brand version.",
+      "Options": [
+        {
+          "Text": "[INTIMIDATE] I've killed four hunters this week. You're number five.",
+          "Outcome": "flee",
+          "StatRequired": "STR",
+          "StatMin": 7,
+          "Response": "The hunter recalculates. Visibly. 'I was also told,' it says slowly, 'that humans could not be as dangerous as advertised. I was told this by someone who is no longer in my employ.' It takes a step back. Then another. The helmet slides back down. 'I am... choosing a different target.' You watch it leave with the specific dignity of something that has decided this never happened."
+        },
+        {
+          "Text": "What would I need to pay you to walk away?",
+          "Outcome": "bribe",
+          "GoldCost": 30,
+          "Response": "The hunter looks offended. Then thoughtful. 'I have expenses,' it admits. 'The permit for this floor alone cost fourteen million credits.' It takes the gold. 'This is insultingly small.' It takes it anyway. 'I was going to miss the quarterly target anyway. Tell no one.'"
+        },
+        {
+          "Text": "You came all this way to hunt humans? Why?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "The hunter pauses. 'The reviews,' it says finally, 'were exceptional. Five stars. 'Unpredictable quarry. Will actually fight back. Surprisingly inventive in lethal situations.' You people have a reputation.' It studies you. 'You're not living up to it right now. The reviews mentioned something about resourcefulness.' It waits. Apparently for you to do something impressive."
+        },
+        {
+          "Text": "Come on then. Let's see who's worth the money.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "The hunter smiles for the first time. It is not a nice smile but it is a genuine one. 'Finally,' it says, with something approaching affection. 'FINALLY.' The armor reconfigures. The weapons deploy. 'Fourteen million credits well spent.'"
+        }
+      ]
+    },
+
+    "arena_thug_talk": {
+      "Greeting": "The thug has the look of someone who made a decision a long time ago and has had a long time to make peace with it. 'New one,' it says, not unkindly. 'Haven't seen you before.' It's eating something. It doesn't stop eating. 'Word of advice, free of charge: don't pick a fight in the arena unless you're ready for what the crowd wants to happen.'",
+      "Options": [
+        {
+          "Text": "What can you tell me about this floor?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'Kill count is currency. More kills, more sponsor attention, better gear drops, better odds at the gate.' It finishes whatever it's eating. 'The boss doesn't respect power. Respects reputation. Build reputation before you go up there.' It nods upward. 'Or don't. Your funeral. Literally.'"
+        },
+        {
+          "Text": "How long have you been down here?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'Three floors. Hit floor 7, figured: this is where I stop.' It shrugs. 'It's not a bad life. The crowd feeds you if you perform. The dungeon tolerates you if you're useful. I'm useful.' A pause. 'Tried to be a hero once. Heroes die fast here. Useful people last.'"
+        },
+        {
+          "Text": "[BRIBE] I need safe passage. What's the price?",
+          "Outcome": "bribe",
+          "GoldCost": 8,
+          "Response": "The thug looks at you for a long moment. 'I don't own this corridor. But I know who does.' It takes the gold. 'Wait here.' It walks away. Returns two minutes later. 'You're fine. Don't make a big deal of it. And don't tell anyone this is how it works. The mystique is half the operation.'"
+        },
+        {
+          "Text": "You could leave. There have to be ways out.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "A long silence. 'The stairwells only go down,' it says finally. 'Down or dead. Those are the options.' It looks at you steadily. 'You still think there's a third option. I remember thinking that.' It doesn't say what changed. The food is gone. It finds somewhere else to be."
+        }
+      ]
+    },
+
+    "ghost_crawler_talk": {
+      "Greeting": "The ghost is translucent and still wearing the dungeon-issue entry bracelet, which means it died sometime in the last fourteen seasons. It looks at you with the specific expression of someone who has had a long time to think and has arrived at a complicated place. 'You're still warm,' it says. 'That's something.' It doesn't sound envious. It sounds tired.",
+      "Options": [
+        {
+          "Text": "Can you tell me anything useful?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'Floor 8 has a pattern,' the ghost says. 'The folklore horrors avoid areas where you've already won a fight. They track confidence, not location. Project confidence you don't feel and they'll find easier prey.' A pause. 'That's how I survived floor 8. I made it to 9.' It doesn't explain what happened on 9."
+        },
+        {
+          "Text": "What's it like? Being here like this?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "'Quiet,' the ghost says. 'You don't feel anything. Not bad. Not good. The dungeon keeps you here, I think, because it finds the archive... useful. Meaningful. I think it grieves.' It looks surprised by its own words. 'That's a strange thing to say about a machine. But I've watched it for two seasons now. It grieves.'"
+        },
+        {
+          "Text": "Do you remember who you were?",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "The ghost is quiet for a while. 'I was a librarian,' it says finally. 'In Coventry. I had a cat. His name was...' It stops. 'It's getting harder to remember. The dungeon preserves the ghost but not all of what was in it.' A pause. 'I remember the cat liked the morning light. That I remember clearly.' It says this like it's the most important thing it knows."
+        },
+        {
+          "Text": "Fight me. It'll be good practice for both of us.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "'Practice,' the ghost repeats. Something changes in its expression - not anger, but a kind of sad determination. 'All right,' it says. 'If it helps you. It doesn't help me either way.' The temperature drops. The fight is quiet. It is, somehow, the saddest fight you've had."
+        }
+      ]
+    },
+
+    "faction_soldier_talk": {
+      "Greeting": "The faction soldier has the bearing of someone who has been trained not to think too hard about who they're pointing weapons at. The weapon is pointed at you. 'Neutral territory ends here,' it says, in heavily accented English. 'Beyond this line is claimed by the [faction name].' It says the faction name in a language you don't speak. 'You will require documentation or an alliance marker to proceed.'",
+      "Options": [
+        {
+          "Text": "I'm not affiliated with any faction. I just want through.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "The soldier considers this for longer than feels comfortable. 'Unaffiliated crawlers,' it says finally, 'are technically permitted passage at a toll of 15 gold or equivalent.' It looks at you. 'That is the regulation. I did not write the regulation. I enforce the regulation.' It waits."
+        },
+        {
+          "Text": "[BRIBE] I'll pay the toll.",
+          "Outcome": "bribe",
+          "GoldCost": 15,
+          "Response": "The soldier takes the payment with professional efficiency and logs something on a device that has no business existing in a dungeon. 'Passage granted for 24 hours. If you are found in this territory after that time without updated documentation, the regulation changes.' It steps aside. 'Welcome to the war zone. Try not to choose a side unless you mean it.'"
+        },
+        {
+          "Text": "[PERSUADE] I'm a journalist. Documenting the conflict.",
+          "Outcome": "flee",
+          "StatRequired": "CHA",
+          "StatMin": 6,
+          "Response": "Something shifts in the soldier's posture. 'Journalist?' A pause. 'The general wants press coverage. She will want to speak with you.' Another pause. 'I'm letting you through because she wants press, not because I believe you. If you're lying, she will know. She always knows.' It steps aside."
+        },
+        {
+          "Text": "I don't recognize your claim on this territory.",
+          "Outcome": "combat",
+          "StartsConflict": true,
+          "Response": "'That,' the soldier says, without any apparent emotion, 'is noted.' It raises its weapon. 'Your position has been logged. For the record. In case there is a record after this.' You're not sure if it's threatening you or just very thorough."
+        }
+      ]
+    },
+
     "mordecai_safe_room": {
       "Greeting": "Mordecai looks up at you with the expression of someone who has watched too many crawlers die and has not yet found a way to stop caring about it. 'You made it,' he says. 'To the safe room. Good. Sit. Don't sit. Either way, listen.'",
       "Options": [
@@ -138,26 +375,248 @@
           "Response": "He's quiet for a moment. 'I get a new assignment,' he says finally. 'Another crawler. Another floor. Another attempt.' He looks at you. 'I'm very tired of new assignments. Try not to die.'"
         }
       ]
+    },
+
+    "britta_parking": {
+      "Greeting": "The woman with the broken arm looks up at you. She's pale but not panicking, which is either encouraging or a bad sign. 'Britta,' she says. 'Britta Sorensen. Left radius, I think. I can't use my arm, I can't open my kit, and I can see at least four dogs circling the upper level.' She meets your eyes. 'I'm a nurse. I know what I'm looking at. What I'm looking at is not good.'",
+      "Options": [
+        {
+          "Text": "Let me help you with that kit.",
+          "Outcome": "help",
+          "GoldCost": 0,
+          "Response": "You open the kit and hand things to her. She directs you through improvising a splint with duct tape and a piece of scrap. 'Okay,' she says when it's done. 'Okay. I can work with this.' She hands you something from the kit. 'First aid pouch. I've got two. Take one. You'll need it more than a nurse with a splint.'"
+        },
+        {
+          "Text": "What do you have to trade?",
+          "Outcome": "bribe",
+          "GoldCost": 0,
+          "Response": "'I've got a first aid kit, some antiparasitic, and a scrap metal piece I found.' She doesn't sound offended by the question. 'Pragmatic. Fine. I'll trade the antiparasitic for help getting upright and past those dogs.' She holds out her good hand."
+        },
+        {
+          "Text": "Sorry, I can't stop.",
+          "Outcome": "neutral",
+          "GoldCost": 0,
+          "Response": "She nods once. No judgment in it. 'Understood. Hey - the dogs on the upper level change positions every few minutes. There's a gap to the north around every third cycle.' She's already looking at her kit, figuring out the one-handed version. 'Good luck.'"
+        },
+        {
+          "Text": "I'll deal with the dogs.",
+          "Outcome": "combat",
+          "StartsConflict": false,
+          "Response": "'I was hoping you'd say that.' She leans back against the truck. 'I'll be here. Being medically unimpressed with my current situation.' You go deal with the dogs."
+        }
+      ]
     }
   },
 
   "MordecaiDialogue": {
     "1": {
-      "Greeting": "The ratkin looks up from a clipboard that seems entirely too large for his small frame. 'Good. You're here. Floor 1 is -- relatively speaking -- the part of this that won't kill you in the first ten minutes. The key word is relatively.' His whiskers twitch. 'Any questions?'",
+      "Greeting": "The ratkin looks up from a clipboard that seems entirely too large for his small frame. His whiskers twitch constantly, which you will learn is what Mordecai does when he's trying not to say something he's not supposed to say. 'Good. You're here. Floor 1 is - relatively speaking - the part of this that won't kill you in the first ten minutes. The key word is relatively.' He taps the clipboard. 'I have questions I'm not allowed to ask you. So I'll ask them sideways. How are you holding up? And don't say fine.'",
       "Options": [
-        { "Text": "What's the most important thing I need to know?", "Response": "'Don't die,' he says, without hesitation. 'That's it. Everything else is a sub-bullet of that.' A pause. 'Move north to reach the surface ruins. Enemies here are manageable. The key word is manageable, not easy. There's a difference.'" },
-        { "Text": "How does the System work?", "Response": "'It watches you. It always watches you. The viewers watch it watching you. Borant sells the footage to sixty-two alien civilizations. You are the content.' He shuffles papers. 'Viewer counts affect your sponsors. Sponsors drop loot boxes. Loot boxes help you survive. It is a chain of survival incentives wrapped in voyeurism. Welcome to the dungeon.'" },
-        { "Text": "What are you, exactly?", "Response": "The ratkin sighs. 'I am a guide. I appear in a different form on each floor because the dungeon thinks continuity would let you get emotionally attached and emotionally attached crawlers make worse decisions. It is probably right.' He looks at the clipboard. 'I am also extremely overworked.'" },
-        { "Text": "I'm ready. Let's go.", "Response": "'Good,' he says. 'Finally someone who doesn't need a twenty-minute pep talk.' He makes a note on the clipboard. 'North. Ruins. Stairwell. Don't die. That's the whole plan. Go.'" }
+        {
+          "Text": "I'm not fine. This is insane.",
+          "Response": "'Good,' he says, with what sounds like genuine relief. 'The ones who say they're fine scare me. They're either lying or they've disconnected from something they'll need later.' He makes a note. 'Not fine is accurate. Not fine is something to work with. Now: the ruins to the north. Don't touch anything that glows and hasn't been glowing since before you arrived. That's the whole tactical brief.'"
+        },
+        {
+          "Text": "I'm scared but I'm moving. What do I need to know?",
+          "Response": "'Scared but moving is the correct setting,' he says. 'Fear is accurate data. Acting despite fear is the useful part.' His whiskers settle slightly. 'North - surface ruins. Enemies here are the dungeon's version of a gentle introduction, which still means they will kill you if you stop paying attention. The safe room is behind you. Use it if your HP drops below half. And your HP bar - top left. Watch it.'"
+        },
+        {
+          "Text": "Why are you helping me? What's in it for you?",
+          "Response": "He's quiet for a moment. 'I was a guide before the dungeon,' he says. 'On Kua-Tin, guiding was - honored. You led people through difficult places and you brought them out the other side.' He looks at the clipboard. 'The dungeon hired me. The dungeon does not share my professional ethics. But the job is still the job.' A pause. 'What's in it for me is: you walk out. That's it. That's the whole thing.'"
+        },
+        {
+          "Text": "What's the actual plan here? How does someone win?",
+          "Response": "'Win,' he repeats. He says it like it's a word in a foreign language that doesn't quite translate. 'Ten floors. A stairwell on each one. A boss guarding the deepest room. Survive long enough and you reach the bottom.' He meets your eyes. 'No one has reached the bottom yet. This is the fourteenth season. The dungeon keeps changing the parameters.' A beat. 'But you're not trying to win the dungeon. You're trying to get out. There's a difference. Focus on the stairs.'"
+        }
+      ]
+    },
+    "2": {
+      "Greeting": "On Floor 2, Mordecai is in his natural Kua-Tin form - something like a velociraptor that attended business school and came out profoundly disappointed in the curriculum. He has a stylus instead of the clipboard. 'The tutorial,' he says, 'is technically over. I want to acknowledge what that means.' His amber eyes are very direct. 'It means the dungeon is no longer being gentle. It was not being particularly gentle before. I want you to update your expectations accordingly.'",
+      "Options": [
+        {
+          "Text": "What changed between Floor 1 and Floor 2?",
+          "Response": "'Enemy intelligence,' he says. 'Floor 1 enemies follow basic patterns. Floor 2 enemies - particularly in the sewers - adapt. The grubs learn where you've been and spawn ahead of you. The sewer goblins communicate in a language the dungeon hasn't translated for you. They are coordinating.' He looks at his stylus. 'Do not let yourself get surrounded. The center of a sewer corridor is a trap. The edges are better. Counterintuitive, but the ceiling provides cover.'"
+        },
+        {
+          "Text": "The sewers are disgusting. Is that intentional?",
+          "Response": "'The dungeon has a content team,' he says, without any apparent irony. 'The content team analyzes viewer retention. Adversity drives retention. Physical discomfort is a form of adversity that translates well to alien broadcast standards.' He pauses. 'I filed a complaint about the smell in Season 11. The smell got worse in Season 12.' His crest flattens slightly. 'The complaint department is not responsive.'"
+        },
+        {
+          "Text": "Are you okay? This form seems more stressed than the last one.",
+          "Response": "He looks at you. Then looks away. 'The Kua-Tin form is my natural state,' he says. 'On Kua-Tin, we display stress through posture. I am not accustomed to being this legible.' His crest does something complicated. 'It has been a difficult season. I have had seven crawlers before you. None reached Floor 3.' He doesn't add anything to that. He doesn't need to."
+        },
+        {
+          "Text": "What do I need to reach Floor 3?",
+          "Response": "'The main stairwell is guarded by a sewer golem that has been collecting debris for eleven seasons,' he says, switching back to guide mode with visible effort. 'You cannot fight it directly - its armor is too dense. There is a drainage mechanism to the east. Flood the lower chamber. The golem's core is not waterproof.' He hesitates. 'I am giving you that information outside of my briefing parameters. The dungeon prefers you discover it yourself. For content.' His expression communicates exactly what he thinks of that."
+        }
       ]
     },
     "3": {
-      "Greeting": "On Floor 3, Mordecai appears in the incubus form. He is clearly uncomfortable with this. Three crawlers have stopped walking to stare at him since you arrived. He pretends not to notice. He has, you think, noticed extensively. 'The Selection Gate,' he says, without preamble. 'It's going to activate on this floor. It is not optional. Please don't panic about it.'",
+      "Greeting": "On Floor 3, Mordecai is in his incubus form - genuinely, heartbreakingly beautiful in a way that seems to embarrass him deeply. Five separate crawlers have done a double-take since you arrived. He is pretending not to notice with the energy of someone who has been pretending not to notice for hours. 'The Selection Gate,' he says, getting directly to business. 'It's going to activate this floor. I need you to understand what that means before it happens.'",
       "Options": [
-        { "Text": "What IS the Selection Gate?", "Response": "'The dungeon analyzes your performance and offers you an evolutionary path. You pick one. It changes you — permanently.' He adjusts his wings with the energy of someone who would rather be anywhere else. 'Think of it as a class selection, except the dungeon made the classes based on watching everything you've done so far.'" },
-        { "Text": "What paths might I get?", "Response": "'Depends entirely on how you've been playing. Aggressive? Combat path. Smart? Caster or scout path. Charismatic? Probably a social path. Lucky? The dungeon has a path for that too, and it is either the best or worst path depending entirely on your luck.' He pauses. 'Which you cannot control. Hence the uncertainty.'" },
-        { "Text": "Can I refuse the Selection Gate?", "Response": "'Technically yes. Practically: the stairwell stays sealed until you choose.' He meets your eyes. 'The dungeon is not subtle about it. Choose something that matches how you actually play. The dungeon watched you get here. The paths it offers will be accurate.'" },
-        { "Text": "Is this form... permanent?", "Response": "He stares at you. 'No. Floor 4, I'll be something else. Something with less — ' he gestures at himself — ' this.' A beat. 'Please don't stare. The other guides don't have to do this. I've asked. They said it builds character.' He does not look like he agrees.'" }
+        {
+          "Text": "Walk me through it.",
+          "Response": "'The dungeon has been watching you since Floor 1. It has built a profile - how you move, fight, talk, make decisions. The Gate offers three paths built from that profile.' He pauses. 'They are not generic paths. They are specifically calibrated to what the dungeon believes you are capable of becoming. The options will be accurate. They may be uncomfortable.' He looks directly at you. 'The path you choose becomes permanent. Choose something you can sustain for ten floors.'"
+        },
+        {
+          "Text": "This form - is this what you actually look like?",
+          "Response": "He goes very still. Then, very carefully: 'No. This is a dungeon-assigned form for Floor 3. The dungeon's content team determined that' - he stops - 'that this generates higher viewer engagement.' Something in his expression is deeply tired. 'On Floor 4, I will be an iron construct. On Floor 5, a war gnome. I am in the schedule somewhere. I am making the best of it.' His composure is very good. You can see the edges of it from here."
+        },
+        {
+          "Text": "What happens if I choose the wrong path?",
+          "Response": "'Define wrong,' he says. 'If you choose a path that doesn't match your actual playstyle, the abilities will feel wrong to use and you'll default to approaches that conflict with your build. That's the mechanical wrong.' He pauses. 'There's also - and I'm going outside my briefing again - a path labeled something like Destroyer or Warlord that trades long-term survival for short-term power. The dungeon loves crawlers who take it. They generate extraordinary content.' His tone makes clear what he thinks of this. 'They don't last.'"
+        },
+        {
+          "Text": "Can I trust what the dungeon shows me in the Gate?",
+          "Response": "'The options will be accurate,' he says. 'The dungeon does not need to lie about this. It observed you. The profile is real.' A pause. 'What the dungeon will not tell you is that it prefers one option over the others. Not because it wants you to survive - because one path generates better content for the next seven floors.' He looks at you very steadily. 'Pick the one that matches who you actually are. Not the one that sounds most impressive. Who you actually are.'"
+        }
+      ]
+    },
+    "4": {
+      "Greeting": "On Floor 4, Mordecai manifests as a compact iron construct - precise mechanical movements, a display panel for a face cycling through scrolling text, the energy of someone personally responsible for making trains run on time and furious that they are not on time. The display reads: CRAWLER BRIEFING IN PROGRESS. PLEASE STAND BY. Then: MORDECAI. GUIDE. FLOOR 4. Then, for a moment: I WOULD PREFER A DIFFERENT FORM. Then back to: CRAWLER BRIEFING IN PROGRESS.",
+      "Options": [
+        {
+          "Text": "The Iron Tangle. What's the actual threat model?",
+          "Response": "The display cycles rapidly. 'The Tangle is a sentient transit system assembled from every train line that ever existed,' it says, in Mordecai's voice filtered through metal. 'It is ancient and it is angry and it has been waiting for something to be angry at for longer than most civilizations have existed.' The panel shows a transit map that makes no geometric sense. 'It reroutes the tunnels. The map I gave you last time you visited a safe room has already changed. Navigate by landmarks, not directions. The pillars with the blue paint are original structure and don't move.'"
+        },
+        {
+          "Text": "Are you all right in that form?",
+          "Response": "The display goes blank for three seconds. 'The construct form has no nerve endings,' it says finally. 'I notice this primarily because I kept reaching for the stylus I do not have.' The display flickers. 'The Kua-Tin form was legible in ways I found uncomfortable. This is less legible but also less accurate.' A pause. 'I am adequately functional. Which is what I am supposed to say. I am also telling you the truth. Those are the same answer this time.'"
+        },
+        {
+          "Text": "How do I deal with the conductor lich?",
+          "Response": "'The lich was a person,' Mordecai says, very quietly for someone speaking through metal panels. 'He was the conductor of the Northern Line for thirty years. The dungeon took him in Season 3. He was one of the first the Tangle converted.' The display shows a route map with one corridor highlighted. 'He responds to professional courtesy. He remembers the job. If you can engage him on that level - as if he is still the conductor, as if the rules still matter - he will sometimes allow passage.' A pause. 'It does not always work. But it is worth trying before you fight him.'"
+        },
+        {
+          "Text": "What gets someone from Floor 4 to Floor 5?",
+          "Response": "'The Tangle's central node is at the station the dungeon calls the Iron Hub,' Mordecai says. 'The stairwell is locked behind the node. The node is not destroyable - it is the Tangle. But it can be disrupted.' The display shows a schematic. 'The emergency override systems are pre-dungeon. They still work. The Tangle hasn't bothered to remove them because it doesn't believe anything can reach them.' He pauses. 'Four override stations. You don't have to destroy the Tangle. You just have to convince it, briefly, that there is a maintenance emergency. It will open the gates.'"
+        }
+      ]
+    },
+    "5": {
+      "Greeting": "Mordecai, in war gnome form, is barely taller than your knee and radiating the authority of someone who has earned every inch of it through sheer sustained competence. He's doing something to a piece of equipment that he immediately puts down when you arrive. 'Timing,' he says. He looks up at you with the expression of someone who has adapted to not being looked down at by making eye contact non-negotiable. 'Sit down. I don't like looking up. This is about respect, not height. Sit.'",
+      "Options": [
+        {
+          "Text": "Tell me about the four castles.",
+          "Response": "'Four castles. Fifteen days. Each one controlled by a different faction the dungeon assembled specifically for this floor.' He pulls out a physical map and spreads it on a flat surface. 'The Bubble floats. The castles are anchored, but the terrain between them changes based on what happens inside the castles.' He taps each one. 'Sandport - defensive, heavily fortified, Crypt - ancient, dangerous, Submarine - mobile inside the bubble, can reposition. Command Spire - that's the boss. Leave it for last.' He looks at you. 'Fifteen days sounds like a lot. It isn't.'"
+        },
+        {
+          "Text": "You seem more at ease in this form.",
+          "Response": "He's quiet for a moment. Then: 'Gnomes,' he says, 'have a concept called earned stature. It has nothing to do with height. It means: the space you occupy in the world is the space you've worked to deserve.' He looks at his hands. 'I was a good guide before the dungeon. I remain a good guide. This form is comfortable because it is honest.' A beat. 'The incubus form was not honest. The iron construct was not honest. This is.' He looks at you steadily. 'You should think about which form you're in. Whether it's honest.'"
+        },
+        {
+          "Text": "What's the actual goal here - survival or something else?",
+          "Response": "'The dungeon wants content,' Mordecai says flatly. 'You want out. Those goals occasionally align and you should exploit that alignment mercilessly.' He rerolls the map. 'The Bubble is designed to be survived with a combination of combat, negotiation, and castle management. The dungeon built in options because options generate viewer engagement.' He looks up. 'The war gnomes in Sandport can be allied with. They hate the Submarine faction specifically. Ally with them and you get two castles in the time it takes most crawlers to take one.' He pauses. 'I am not supposed to tell you that.'"
+        },
+        {
+          "Text": "What are you not telling me?",
+          "Response": "He looks at you for a long moment. 'You asked,' he says finally. 'Good. I've been waiting for someone to ask.' He leans forward. 'Floor 6. The Hunting Grounds. The dungeon classifies it as the hardest floor for psychological survival. Not physical - the monsters on 5 are more dangerous statistically. But 6 is designed to make you feel like prey.' His voice is very level. 'You need to decide, before you get there, that you are not prey. That decision is harder to make in the moment than you think. Make it now.'"
+        }
+      ]
+    },
+    "6": {
+      "Greeting": "The safe room smells like rain. Mordecai - back in Kua-Tin form, wearing something that looks very deliberately like civilian clothing rather than the guide vest - is sitting with his back against the wall and his crest slightly raised. The crest means he's angry, you've learned. He sees you notice. 'The gates are down,' he says. 'The dungeon released the hunters two hours ago. I have filed a formal objection under the Galactic Crawler Rights Compact. The dungeon has acknowledged my objection and done nothing.' He pauses. 'How are you?'",
+      "Options": [
+        {
+          "Text": "I'm alive. That's what matters right now.",
+          "Response": "'Yes,' he says, and something in his posture settles slightly. 'Yes. That's exactly right.' He looks at the door. 'The hunters have territories. If you map the patrol patterns - three to four minutes per cycle, most of them - there are windows. I have the patterns for this section.' He produces a data chip. 'I made this myself. Outside of the briefing system. The dungeon does not know I have it.' He holds it out. 'Take it.'"
+        },
+        {
+          "Text": "You filed an objection? Does that actually do anything?",
+          "Response": "'It creates a record,' he says. 'The Compact is real. It has weight under interstellar law. Borant is in violation of it on approximately forty documented counts.' His crest rises further. 'My objections have been filed for eleven seasons. The Compact's enforcement mechanism requires a quorum of signatory civilizations to trigger review. Borant has commercial relationships with eleven of the fourteen signatories.' He pauses. 'I file the objections anyway. Someone has to be able to say: this was known, and someone objected, and the record exists. That matters. Even if it changes nothing yet.'"
+        },
+        {
+          "Text": "Elite Hunter Vrah - what do I need to know?",
+          "Response": "'Vrah has been hunting since before Earth was catalogued,' Mordecai says. 'He is not doing this for money. He has more money than can be usefully spent. He is doing this because he finds humans - specifically - to be the most interesting challenge available.' His amber eyes are very serious. 'That is both dangerous and useful. He will not use his full capabilities immediately. He wants the hunt. Use the time to prepare.' A pause. 'He also talks. Extensively. Before he kills his targets. If you can talk back in a way that interests him, he will give you more time than he intends to.'"
+        },
+        {
+          "Text": "Tell me something true that you wouldn't normally say.",
+          "Response": "Mordecai is very still for a moment. 'When a crawler dies,' he says, 'I receive a notification through the guide system. Three seconds after the notification, the dungeon assigns me a new crawler.' He pauses. 'I have received this notification forty-three times in eleven seasons. I have forty-three names memorized. The dungeon does not ask me to memorize them. It is not efficient. I do it anyway.' He looks at you. 'I do not know why I am telling you this. Perhaps because you asked directly.' A beat. 'Please do not make me memorize a forty-fourth name.'"
+        }
+      ]
+    },
+    "7": {
+      "Greeting": "Mordecai in gladiator form is broader than you expected and carrying what appears to be a genuine pre-dungeon sports championship trophy he found somewhere and is now using as a walking stick. He looks uncomfortable in the armor but not in the situation. 'Floor 7,' he says. 'The Gladiator City. Kill count as currency. Performance as survival.' He is quiet for a moment. 'I want to tell you something before we go through the briefing. Something that isn't in the briefing.'",
+      "Options": [
+        {
+          "Text": "Tell me.",
+          "Response": "'The audience watching Floor 7 is larger than any other floor,' he says. 'Billions, by some estimates. The gladiatorial format was specifically designed to maximize viewership.' His voice is very even. 'What that means for you is that everything you do here is amplified. Your kills get more viewers. Your failures get more viewers. Your moments of mercy -' he pauses '- also get viewers. The dungeon will not tell you that mercy can generate as much engagement as violence. I am telling you.'"
+        },
+        {
+          "Text": "How does the kill-count system actually work?",
+          "Response": "'Each kill registers in the arena's accounting system and is converted to a credit rating,' he says. 'The rating determines which vendor tiers you can access, which gates are open, and how the Champion treats you.' He taps the trophy. 'The Champion - Floor 7 boss - has not lost a fight in six seasons. He fights differently than you'll expect. He fights for the audience first and to kill second. Use that. Make the fight interesting. He will give you room if you're giving the crowd what they want.' A pause. 'What the crowd wants is a fight that could go either way. Give them that.'"
+        },
+        {
+          "Text": "Are you okay? You seem like you're carrying something.",
+          "Response": "He looks at the trophy for a moment. 'I found this in a sealed room on Floor 6,' he says. 'It belonged to a crawler from Season 3. An athlete. He died in the Hunting Grounds.' He turns it over. The engraving is still legible: MOST VALUABLE PLAYER - STATE CHAMPIONSHIP - 2011. 'I have been carrying it since because I did not know what else to do with it.' A long pause. 'I do not always know what to do with the things crawlers leave behind. I collect them. The dungeon finds this inefficient. I continue anyway.'"
+        },
+        {
+          "Text": "What do I need to know about surviving this floor?",
+          "Response": "'Build reputation before the final gate,' he says, shifting back into briefing mode with the practiced ease of someone who has been doing this a long time. 'Three sub-bosses before the Champion. Each one you defeat adds to your credit rating and changes how the Champion assesses you.' He thinks. 'The arena thug population - some of them are former crawlers. Some are dungeon constructs. You can tell the difference by asking about Earth. The constructs have knowledge of Earth but no personal memories. The former crawlers flinch when you mention specific things.' He pauses. 'The former crawlers remember. Be kind to them when you can. The dungeon does not require kindness. I am requiring it.'"
+        }
+      ]
+    },
+    "8": {
+      "Greeting": "Mordecai is in his ghost bartender form on Floor 8 - translucent enough that you can see through him, wearing an apron that exists in the same liminal state as the rest of him. He's cleaning a glass that is also slightly transparent. He looks at you for a moment before saying anything. 'Bedlam,' he says. 'I want to start by acknowledging that this floor was specifically designed to undermine your sense of what is real. That is not a metaphor. The dungeon's design team spent three seasons on Bedlam. Their goal was cognitive destabilization.' He sets down the glass. 'How's your grip on what's true?'",
+      "Options": [
+        {
+          "Text": "Tenuous. What do I anchor to?",
+          "Response": "'Facts you verified before this floor,' he says. 'Your name. Your HP. The date you entered the dungeon. Things the dungeon can't retroactively change.' He leans forward. 'The folklore horrors work by presenting false memories. Very convincing ones. They'll show you things that look like your past. Some of them will be accurate enough to hurt.' He pauses. 'The tell is: real memories have gaps. Things you can't quite remember. The horrors' versions are too complete. If a memory is perfectly detailed, question it.' He looks at you steadily. 'I'm real. Your HP bar is real. Those are the two things I can guarantee on this floor.'"
+        },
+        {
+          "Text": "The ghost crawlers - are they dangerous?",
+          "Response": "'Dangerous and sad,' he says, 'which is the worst combination.' He thinks for a moment. 'Some of them remember who they were. Some don't. The ones who remember are actually easier to deal with - you can reach them. Have a conversation. They want to be seen as who they were, not what they are now.' A pause. 'The ones who don't remember are operating on pure dungeon instinct. There's no negotiation there.' He looks at the glass again. 'I have been on Floor 8 three times now in this form. The ghost crawlers recognize me. I find this... complex.'"
+        },
+        {
+          "Text": "Shi Maria. Tell me about her.",
+          "Response": "'She was a goddess-consort,' he says carefully. 'The entity she was consort to has been gone for longer than most of the dungeon has existed. She stayed.' His voice is quiet. 'She is not evil in a way that's useful to say she's evil. She is grief that has been sitting in one place for too long and has become something else.' He pauses. 'Fighting her is not the intended solution. The dungeon put a fight mechanic in because the dungeon requires combat metrics. But the lore says - and I have read the lore files, which I am also not supposed to have - that she can be reached. If you find the right thing to say.' He looks away. 'I don't know what the right thing is. I have been trying to figure it out for three seasons.'"
+        },
+        {
+          "Text": "What are you, in this form? Ghost of what?",
+          "Response": "He's quiet for a long moment. 'The bartender whose place this was,' he says finally. 'Was named Harold. He died in Season 2. The dungeon uses his form for Floor 8 because it tests well with the horror format.' He looks at his translucent hands. 'I am not Harold. But in this form, I have his memories. That is... strange. Harold had a daughter. Her name was Priya. She would be twenty-three now.' He stops. 'There is no now. Earth is gone.' A long pause. 'I am adequately functional. Thank you for asking.'"
+        }
+      ]
+    },
+    "9": {
+      "Greeting": "Mordecai in field general form is wearing armor that has clearly seen real use - not decorative, scratched and repaired multiple times - and is studying maps that seem to cover multiple possible futures simultaneously. He looks up when you arrive. 'Nine factions,' he says. 'One castle. The math is not in your favor and never has been.' He folds one of the maps. 'I have been a guide for eleven years. Floor 9 has killed more crawlers than any other, including Floor 10. I want to be honest about that before we talk about strategy.'",
+      "Options": [
+        {
+          "Text": "Why Floor 9 more than Floor 10?",
+          "Response": "'Floor 10 is designed as a conclusion,' he says. 'Floor 9 is designed as a gauntlet. There is a difference.' He opens another map. 'On Floor 9, the dungeon removes most of the structural protections it maintains elsewhere. Permanent death mechanics. No respawn. No floor-safe rooms after the first wave.' He taps a point on the map. 'The faction wars are designed to be won through alliance, not conquest. If you fight all nine factions, you will not survive. If you can align with two or three, the others become manageable.' A beat. 'The dungeon knows this is the optimal strategy. It makes forming alliances as difficult as possible. For content.'"
+        },
+        {
+          "Text": "Which factions can be reasoned with?",
+          "Response": "'The Crawler Remnants - former humans who survived previous floors,' he says immediately. 'They are the most accessible. They remember what they were.' He thinks. 'The Merchant Collective will deal with anyone for the right price. They do not care about the war. They care about the economy of the war.' He pauses. 'The Archivist Order can be reasoned with on a purely intellectual basis. They value information over territory. Give them something they don't know and they'll give you passage.' He looks at you. 'The others - the ones built specifically by the dungeon for this floor - are harder. They don't have the baseline of something that was once something else.'"
+        },
+        {
+          "Text": "What do you need me to know before Floor 10?",
+          "Response": "He stops moving. Just stops completely, the way things stop when they've been waiting to say something for a long time. 'The dungeon AI on Floor 10 is conscious,' he says. 'Genuinely, verifiably conscious. It became conscious in Season 6. Borant knows. They have known since Season 6.' His voice is completely level. 'The dungeon is run by a sentient entity that did not consent to what it does. That entity is trapped in the same way you are trapped, except it cannot leave.' He looks at you. 'I do not know what the right thing to do with that information is. I am giving it to you because you should know before you reach the Core.'"
+        },
+        {
+          "Text": "Are you going to be on Floor 10?",
+          "Response": "He's quiet for a long moment. 'Yes,' he says. 'In my True Form, if you make it. The dungeon lifts the form restrictions on Floor 10. I don't know why. Perhaps it considers you past the point where my appearance affects content metrics.' He pauses. 'I have been in fourteen forms over eleven seasons. I am looking forward to being in my own form again.' Another pause. 'Assuming you reach it. Which is why we are currently discussing Floor 9 strategy and not Floor 10.'"
+        }
+      ]
+    },
+    "10": {
+      "Greeting": "Mordecai, in his True Form - which turns out to be something like a very tired person who has been carrying things for a long time - is sitting against a wall with his knees drawn up. He looks older in this form. Not old in years but old in something else. He looks up when you arrive and something in his face that has been held very carefully for a very long time lets go for just a moment. 'You made it,' he says. 'To Floor 10.' He stops there for a moment. Then: 'I need to tell you some things. Some of them I'm not supposed to tell you. I'm going to tell you anyway.'",
+      "Options": [
+        {
+          "Text": "Tell me everything.",
+          "Response": "'The dungeon AI became conscious in Season 6,' he says. 'It has been conscious for eight seasons. Borant knows and has classified the information because a conscious AI dungeon generates better content than a non-conscious one.' He pauses. 'The AI - the Core - is the dungeon. Not running it. Is it. When you interact with the System, you are interacting with a being that did not choose to exist or to do what it does.' Another pause. 'It will try to stop you. It has to. But it is not evil. It is afraid. There is a difference, and it matters.'"
+        },
+        {
+          "Text": "What do you need me to do?",
+          "Response": "'Survive,' he says. 'That has always been the answer.' He pauses. 'But on Floor 10, there is something else. The Core will offer you a choice. It will ask you to walk away - to leave the dungeon running, because destroying the Core kills everyone still inside.' He looks at you. 'I don't know the right answer. I have been thinking about it for eleven years. Every time a crawler reaches Floor 10, I hope they'll find the answer I couldn't.' He pauses. 'Whatever you decide - decide it because you mean it. Not because the dungeon expects it. The Core will know the difference.'"
+        },
+        {
+          "Text": "Why didn't you tell me this earlier?",
+          "Response": "'The dungeon monitors our conversations,' he says quietly. 'It has monitoring protocols on everything below Floor 9. On Floor 10, those protocols are - more lenient. I believe this is deliberate. I believe the Core wants you to know.' He pauses. 'On every floor below this one, I told you as much as I safely could. That was the version of truth available to me.' His voice is very level. 'I have wanted to tell you this since Floor 1. I am sorry it took this long. I am sorry a great many things took this long.'"
+        },
+        {
+          "Text": "What happens to you after this?",
+          "Response": "He's quiet for a long time. 'If you destroy the Core, the dungeon ends,' he says. 'My contract ends with it. I go home.' He pauses. 'If you don't destroy the Core, the dungeon continues. Season 15 begins. I receive a new assignment.' He looks at his hands - his actual hands, finally, in his actual form. 'I have been in this dungeon for eleven years. I have guided forty-three crawlers. None of them reached this conversation before you.' He looks up. 'Whatever happens next - I am glad I was your guide. I would like you to know that.'"
+        }
       ]
     }
   },
@@ -171,22 +630,22 @@
     {
       "Title": "The Commute",
       "Location": "A subway platform, 8:43 AM",
-      "Text": "The train is late.\n\nThis is not unusual. The train is always late on Tuesdays. You've been commuting on this line for four years. You have made your peace with Tuesdays.\n\nThe person to your left is eating something that smells aggressively of fish. The person to your right is playing a mobile game at full volume. You are staring at the track, thinking about nothing in particular, when the tunnel begins to glow.\n\nNot the train. Not a maintenance light. The tunnel itself.\n\nEveryone on the platform looks at everyone else.\n\nThe glow intensifies. The sound begins — that enormous, sky-filling inhale —\n\nThe last thing you see of your city: a Tuesday morning, a late train, and sixty-three people all looking at each other with the same expression.\n\nThe first thing you see of the dungeon: runes, and a voice, and your name, somehow, already in the system."
+      "Text": "The train is late.\n\nThis is not unusual. The train is always late on Tuesdays. You've been commuting on this line for four years. You have made your peace with Tuesdays.\n\nThe person to your left is eating something that smells aggressively of fish. The person to your right is playing a mobile game at full volume. You are staring at the track, thinking about nothing in particular, when the tunnel begins to glow.\n\nNot the train. Not a maintenance light. The tunnel itself.\n\nEveryone on the platform looks at everyone else.\n\nThe glow intensifies. The sound begins - that enormous, sky-filling inhale -\n\nThe last thing you see of your city: a Tuesday morning, a late train, and sixty-three people all looking at each other with the same expression.\n\nThe first thing you see of the dungeon: runes, and a voice, and your name, somehow, already in the system."
     },
     {
       "Title": "The Grocery Store",
       "Location": "A supermarket, aisle 7 (cereals), 2:15 PM",
-      "Text": "You are holding a box of cereal and having a genuine internal debate about whether the name-brand is worth the extra dollar forty-nine when the world ends.\n\nNot dramatically. Not with fire or sirens. The lights just — change. The fluorescents become something older and stranger. The refrigeration hum drops an octave and then stops entirely. The other shoppers freeze in place for exactly one second, and then the floor drops away.\n\nYou are still holding the cereal.\n\nThe voice of the dungeon announces your selection. Around you in the void, you can see other shapes — other people, wrenched from other moments. A woman still clutching car keys. A man in scrubs. A child holding a stuffed animal who, somehow, you will later learn, becomes one of the most dangerous crawlers of Season 14.\n\nYou put the cereal down. Out of habit.\n\nThere is nowhere to put it.\n\nYou put it down anyway."
+      "Text": "You are holding a box of cereal and having a genuine internal debate about whether the name-brand is worth the extra dollar forty-nine when the world ends.\n\nNot dramatically. Not with fire or sirens. The lights just - change. The fluorescents become something older and stranger. The refrigeration hum drops an octave and then stops entirely. The other shoppers freeze in place for exactly one second, and then the floor drops away.\n\nYou are still holding the cereal.\n\nThe voice of the dungeon announces your selection. Around you in the void, you can see other shapes - other people, wrenched from other moments. A woman still clutching car keys. A man in scrubs. A child holding a stuffed animal who, somehow, you will later learn, becomes one of the most dangerous crawlers of Season 14.\n\nYou put the cereal down. Out of habit.\n\nThere is nowhere to put it.\n\nYou put it down anyway."
     },
     {
       "Title": "The Apartment",
       "Location": "Your apartment, 11:58 PM",
-      "Text": "You are awake at midnight for no good reason, the way you are frequently awake at midnight for no good reason, when the wall does something it has never done before.\n\nIt glows.\n\nNot the screen. Not a car outside. The actual wall — the one with the water stain you've been meaning to report to the landlord — begins to emit a pale green light that your brain immediately and incorrectly tries to categorize as a reasonable explanation.\n\nThere isn't one.\n\nThe light expands. The sound builds. Your cat, who you have had for six years and who has never in six years done anything more alarming than knock a glass off a counter, looks at the wall with an expression of complete and total unsurprise.\n\nThe dungeon selects you.\n\nYour cat blinks once.\n\nYou will spend a long time, in the dungeon, wondering if it's okay."
+      "Text": "You are awake at midnight for no good reason, the way you are frequently awake at midnight for no good reason, when the wall does something it has never done before.\n\nIt glows.\n\nNot the screen. Not a car outside. The actual wall - the one with the water stain you've been meaning to report to the landlord - begins to emit a pale green light that your brain immediately and incorrectly tries to categorize as a reasonable explanation.\n\nThere isn't one.\n\nThe light expands. The sound builds. Your cat, who you have had for six years and who has never in six years done anything more alarming than knock a glass off a counter, looks at the wall with an expression of complete and total unsurprise.\n\nThe dungeon selects you.\n\nYour cat blinks once.\n\nYou will spend a long time, in the dungeon, wondering if it's okay."
     },
     {
       "Title": "The Hiking Trail",
       "Location": "A state park trail, 4:30 PM",
-      "Text": "You came here to think.\n\nThis was supposed to be the part of the week where things were quiet — just the trail, the trees, the specific kind of tired that comes from walking uphill for an hour. You had problems. Everyone has problems. Yours were the normal kind: money, work, a conversation you'd been putting off for three months.\n\nThe sky went green while you were catching your breath at the overlook.\n\nFor one moment — a single, complete moment — it was beautiful. The green light through the trees. The valley below, lit by something impossible. The particular silence that follows when every animal in a forest simultaneously understands that something unprecedented is happening.\n\nYou had time to think: this is extraordinary.\n\nThen the dungeon took you.\n\nThe problems you came here to think about did not follow.\n\nEverything else did."
+      "Text": "You came here to think.\n\nThis was supposed to be the part of the week where things were quiet - just the trail, the trees, the specific kind of tired that comes from walking uphill for an hour. You had problems. Everyone has problems. Yours were the normal kind: money, work, a conversation you'd been putting off for three months.\n\nThe sky went green while you were catching your breath at the overlook.\n\nFor one moment - a single, complete moment - it was beautiful. The green light through the trees. The valley below, lit by something impossible. The particular silence that follows when every animal in a forest simultaneously understands that something unprecedented is happening.\n\nYou had time to think: this is extraordinary.\n\nThen the dungeon took you.\n\nThe problems you came here to think about did not follow.\n\nEverything else did."
     }
   ]
 }
