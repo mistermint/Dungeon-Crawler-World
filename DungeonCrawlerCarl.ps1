@@ -18,7 +18,7 @@ Add-Type -AssemblyName System.Windows.Forms
 #   Center (*):  RichTextBox terminal + command input
 #   Right (260): Inventory ListBox + Loot Box ListBox
 # ============================================================
-[xml]$XAML = @"
+$xaml = @"
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -785,7 +785,7 @@ $script:ItemDB = @{
                               Lore="Side effects include: confidence, aggression, the feeling that you can handle anything. You probably cannot." }
     "mana_vial"         = @{ Name="Mana Vial";               Type="consumable"; HealMP=3;   Value=20; Rarity="uncommon";
                               Desc="A blue vial that tastes of static electricity. Restores 3 MP.";
-                              Lore="Concentrated dungeon mana, bottled at a 1,200% markup. The mana is free. The bottle is $20." }
+                              Lore="Concentrated dungeon mana, bottled at a 1,200% markup. The mana is free. The bottle is `$20." }
     "greater_mana"      = @{ Name="Greater Mana Potion";     Type="consumable"; HealMP=6;   Value=45; Rarity="rare";
                               Desc="Full mana restoration for most crawlers. Tastes of ozone and ambition.";
                               Lore="Favored by Occultist-class crawlers. Floor 3 witches make their own." }
