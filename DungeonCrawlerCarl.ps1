@@ -740,10 +740,25 @@ $script:SystemBoredomPool = @(
 )
 
 # ============================================================
-# ITEM DATABASE
+# DATA LOADING HELPERS + ITEM / ENEMY DATABASE  (from JSON)
 # ============================================================
-$script:ItemDB = @{
-    # --- Weapons ---
+function ConvertPSObjectToHashtable {
+    param([Parameter(ValueFromPipeline)]$InputObject)
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+        $ht = [ordered]@{}
+        $InputObject.PSObject.Properties | ForEach-Object { $ht[$_.Name] = ConvertPSObjectToHashtable $_.Value }
+        return $ht
+    } elseif ($InputObject -is [array]) {
+        return @($InputObject | ForEach-Object { ConvertPSObjectToHashtable $_ })
+    }
+    return $InputObject
+}
+
+$_dataPath = Join-Path $PSScriptRoot "data"
+$script:ItemDB = Get-Content (Join-Path $_dataPath "items.json") -Raw | ConvertFrom-Json | ConvertPSObjectToHashtable
+
+# (Legacy inline entries kept as fallback for any IDs not yet in items.json)
+$_legacyItemDB = @{
     "pipe_wrench"       = @{ Name="Pipe Wrench";             Type="weapon"; Attack=6;  Value=5;   Rarity="common";
                               Desc="Heavy, reliable, extremely satisfying to connect.";
                               Lore="Manufactured by EarthCorp in 2019. Survived the Transformation. Now survives everything else." }
@@ -862,12 +877,19 @@ $script:ItemDB = @{
     "map_province"      = @{ Name="Province Map";       Type="map"; Value=400; Rarity="legendary";Desc="Reveals most of the floor on the mini-map.";       Lore="One of only four printed. Borant keeps the others." }
     "map_country"       = @{ Name="Country Map";        Type="map"; Value=800; Rarity="legendary";Desc="Reveals the entire floor on the mini-map.";        Lore="Complete floor schematic. Only dropped by the rarest bosses." }
 }
+# Merge legacy fallbacks into loaded DB (JSON takes priority)
+foreach ($k in $_legacyItemDB.Keys) { if (-not $script:ItemDB.ContainsKey($k)) { $script:ItemDB[$k] = $_legacyItemDB[$k] } }
 
 # ============================================================
-# ENEMY DATABASE  (CanTalk + DialogueId for intelligent mobs)
+# ENEMY DATABASE  (loaded from data/enemies.json)
 # ============================================================
-$script:EnemyDB = @{
-    # Floor 1-2
+$_rawEnemyDB = Get-Content (Join-Path $_dataPath "enemies.json") -Raw | ConvertFrom-Json | ConvertPSObjectToHashtable
+$script:EncounterGroups = $_rawEnemyDB["_encounter_groups"]
+$_rawEnemyDB.Remove("_encounter_groups")
+$script:EnemyDB = $_rawEnemyDB
+
+# (Legacy inline fallback entries for any IDs not yet in enemies.json)
+$_legacyEnemyDB = @{
     "exploding_goblin"  = @{ Name="Exploding Goblin";    MaxHP=20; Attack=5;  Defense=1; Speed=3; XP=15; Gold=@(1,5);   Floor=1; Type="goblin";
                               CanTalk=$true; DialogueId="goblin_basic"
                               Desc="A goblin strapped with low-grade explosive.";
@@ -975,6 +997,7 @@ $script:EnemyDB = @{
                               Desc="The dungeon AI gone fully rogue.";
                               Special="System Override"; SpecialChance=40; SpecialDesc="System Override! Resets your buffs and heals the Core!"; HealSelf=20 }
 }
+foreach ($k in $_legacyEnemyDB.Keys) { if (-not $script:EnemyDB.ContainsKey($k)) { $script:EnemyDB[$k] = $_legacyEnemyDB[$k] } }
 
 # ============================================================
 # DIALOGUE DATABASE  (Fallout-style NPC conversations)
@@ -2119,9 +2142,8 @@ function New-GameState {
         LootBoxes=0; PendingAchievements=@(); PendingAchievementBoxes=@()
         Viewers=142; ViewerPeak=142; Sponsors=@()
         Kills=0; RoomsVisited=0; StepsThisFloor=0
-        InCombat=$false; CurrentEnemy=$null; EnemyHP=0; EnemyMaxHP=0
+        InCombat=$false; CombatEnemies=@(); SelectedTarget=0
         CombatRound=0; PlayerHiding=$false; DistractActive=$false
-        SpellStunActive=$false; SpellSlowActive=$false
         InDialogue=$false; DialogueId=$null; CurrentNPCEnemy=$null
         TutorialComplete=$false; TutorialStep=0
         QuestLog=@(); CompletedQuests=@()
@@ -2305,9 +2327,11 @@ function Update-HUD {
         $ai = $script:ItemDB[$g.EquippedArmor]
         "Armor: $(if ($ai) { $ai.Name } else { '?' })"
     } else { "Armor: Street Clothes" }
-    $enemyName = if ($g.InCombat -and $g.CurrentEnemy) {
-        $edef = $script:EnemyDB[$g.CurrentEnemy]
-        if ($edef) { $edef.Name } else { $g.CurrentEnemy }
+    $enemyName = if ($g.InCombat -and $g.CombatEnemies.Count -gt 0) {
+        $alive = @($g.CombatEnemies | Where-Object { $_.HP -gt 0 })
+        if ($alive.Count -gt 1) { "$($alive.Count) enemies" }
+        elseif ($alive.Count -eq 1) { (Get-EnemyDef $alive[0].Id $g.Floor).Name }
+        else { "" }
     } else { "" }
 
     $script:Window.Dispatcher.Invoke([Action]{
@@ -2363,7 +2387,10 @@ function Update-HUD {
             $lblE = $script:Window.FindName("lblEnemy")
             if ($lblE) { $lblE.Text = $enemyName }
             $lblEHP = $script:Window.FindName("lblEnemyHP")
-            if ($lblEHP) { $lblEHP.Text = "HP: $($g.EnemyHP) / $($g.EnemyMaxHP)" }
+            if ($lblEHP) {
+                $tgtInfo = Get-CurrentTarget
+                if ($tgtInfo) { $lblEHP.Text = "HP: $($tgtInfo.Inst.HP) / $($tgtInfo.Inst.MaxHP)" } else { $lblEHP.Text = "" }
+            }
         }
     })
     Update-AchieveBadge
@@ -2598,9 +2625,8 @@ function Enter-Room {
     if ($enemies.Count -gt 0) {
         $enemyNames = $enemies | ForEach-Object { $e = $script:EnemyDB[$_]; if ($e -and $e.Name) { $e.Name } else { $_ } }
         Write-Combat "Enemies: $($enemyNames -join ', ')"
-        # Auto-start combat with first enemy
-        $firstEnemy = $enemies[0]
-        Start-Combat $firstEnemy
+        # Start combat with all room enemies
+        Start-Combat $enemies
     } else {
         # Check for Mordecai in safe room
         if ($room.HasMordecai -and $room.IsSafeRoom) {
@@ -2621,42 +2647,98 @@ function Enter-Room {
 }
 
 # ============================================================
+# COMBAT HELPERS
+# ============================================================
+function Get-EnemyDef {
+    param([string]$EnemyId, [int]$Floor=1)
+    $base = $script:EnemyDB[$EnemyId]
+    if (-not $base) { return $null }
+    $entry = $base.FloorMin
+    if (-not $entry) { $entry = 1 }
+    $floorsAbove = [Math]::Max(0, $Floor - $entry)
+    $result = @{}
+    foreach ($k in $base.Keys) { $result[$k] = $base[$k] }
+    $result.MaxHP    = $base.MaxHP    + ($floorsAbove * (if ($base.HPPerFloor)  { $base.HPPerFloor  } else { 2 }))
+    $result.Attack   = $base.Attack   + ($floorsAbove * (if ($base.AtkPerFloor) { $base.AtkPerFloor } else { 1 }))
+    $result.Defense  = $base.Defense  + [Math]::Floor($floorsAbove * (if ($base.DefPerFloor) { $base.DefPerFloor } else { 0 }))
+    $result.XP       = $base.XP       + ($floorsAbove * (if ($base.XPPerFloor)  { $base.XPPerFloor  } else { 2 }))
+    return $result
+}
+
+function Get-CurrentTarget {
+    $g = $script:GS
+    if (-not $g.CombatEnemies -or $g.CombatEnemies.Count -eq 0) { return $null }
+    $idx = $g.SelectedTarget
+    if ($idx -ge $g.CombatEnemies.Count) { $idx = 0 }
+    $inst = $g.CombatEnemies[$idx]
+    if ($inst.HP -le 0) {
+        # Find first alive
+        for ($i = 0; $i -lt $g.CombatEnemies.Count; $i++) {
+            if ($g.CombatEnemies[$i].HP -gt 0) { $idx = $i; $g.SelectedTarget = $i; $inst = $g.CombatEnemies[$i]; break }
+        }
+        if ($inst.HP -le 0) { return $null }
+    }
+    $edef = Get-EnemyDef $inst.Id $g.Floor
+    return @{ Idx=$idx; Inst=$inst; Def=$edef }
+}
+
+function Get-AliveEnemyCount {
+    if (-not $script:GS.CombatEnemies) { return 0 }
+    return @($script:GS.CombatEnemies | Where-Object { $_.HP -gt 0 }).Count
+}
+
+# ============================================================
 # COMBAT
 # ============================================================
 function Start-Combat {
-    param([string]$EnemyId)
+    param([string[]]$EnemyIds)
     $g = $script:GS
-    $edef = $script:EnemyDB[$EnemyId]
-    if (-not $edef) { return }
+    if (-not $EnemyIds -or $EnemyIds.Count -eq 0) { return }
 
-    $g.InCombat = $true
-    $g.CurrentEnemy = $EnemyId
-    $baseHP = (if ($edef.MaxHP) { $edef.MaxHP } else { 20 }) + ($g.Floor * 2)
-    $g.EnemyHP = $baseHP; $g.EnemyMaxHP = $baseHP
-    $g.CombatRound = 1
-    $g.PlayerHiding = $false
+    $g.InCombat       = $true
+    $g.CombatRound    = 1
+    $g.SelectedTarget = 0
+    $g.PlayerHiding   = $false
     $g.DistractActive = $false
     $script:CombatStartLevel = $g.Level
 
-    Write-Sep
-    Write-Combat "$($edef.Name) appears!"
-    if ($edef.Special) { Write-Info "Warning: $($edef.Name) has a special ability -- $($edef.Special)!" }
-    if ($edef.CanTalk) { Write-Info "(This enemy can talk. TALK to attempt dialogue.)" }
+    # Build combat instances array
+    $g.CombatEnemies = @()
+    foreach ($id in $EnemyIds) {
+        $edef = Get-EnemyDef $id $g.Floor
+        if (-not $edef) { continue }
+        $hp = if ($edef.MaxHP) { $edef.MaxHP } else { 20 }
+        $g.CombatEnemies += @(@{ Id=$id; HP=$hp; MaxHP=$hp; Stunned=$false; SlowPenalty=0 })
+    }
+    if ($g.CombatEnemies.Count -eq 0) { $g.InCombat = $false; return }
 
-    Show-CombatWindow $EnemyId
+    Write-Sep
+    if ($g.CombatEnemies.Count -eq 1) {
+        $edef = Get-EnemyDef $g.CombatEnemies[0].Id $g.Floor
+        Write-Combat "$($edef.Name) appears!"
+        if ($edef.Special) { Write-Info "Warning: has special -- $($edef.Special)!" }
+        if ($edef.CanTalk) { Write-Info "(This enemy can talk. TALK to attempt dialogue.)" }
+    } else {
+        $names = @($g.CombatEnemies | ForEach-Object { (Get-EnemyDef $_.Id $g.Floor).Name })
+        Write-Combat "Encounter! $($names -join ' + ')"
+    }
+
+    Show-CombatWindow
 }
 
 function Do-Attack {
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "Not in combat."; return }
-    $edef = $script:EnemyDB[$g.CurrentEnemy]
+    $tgt = Get-CurrentTarget
+    if (-not $tgt) { Write-Warn "No valid target."; return }
+    $edef = $tgt.Def; $inst = $tgt.Inst
     $playerAtk = Get-TotalAttack
-    $roll = Get-Random -Minimum 1 -Maximum 7
-    $enemyDef = if ($edef.Defense) { $edef.Defense } else { 0 }
+    $roll      = Get-Random -Minimum 1 -Maximum 7
+    $enemyDef  = if ($edef.Defense) { $edef.Defense } else { 0 }
     $dmg = [Math]::Max(1, $playerAtk + $roll - $enemyDef + (Get-Random -Minimum -1 -Maximum 2))
-    $g.EnemyHP -= $dmg
-    Write-Combat "You attack $($edef.Name) for $dmg damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
-    if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+    $inst.HP -= $dmg
+    Write-Combat "You attack $($edef.Name) for $dmg damage!  ($([Math]::Max(0,$inst.HP))/$($inst.MaxHP) HP)"
+    if ($inst.HP -le 0) { Resolve-SingleKill $tgt.Idx; return }
     Enemy-Attack
 }
 
@@ -2677,7 +2759,9 @@ function Do-CastSpell {
     if (-not $spell) { Write-Warn "Unknown spell."; return }
     if ($g.MP -lt $spell.Cost) { Write-Warn "Not enough MP! ($($spell.Name) costs $($spell.Cost) MP)"; return }
 
-    $edef = $script:EnemyDB[$g.CurrentEnemy]
+    $tgt = Get-CurrentTarget
+    if (-not $tgt) { Write-Warn "No valid target."; return }
+    $edef = $tgt.Def; $inst = $tgt.Inst
     $g.MP -= $spell.Cost
 
     switch ($spell.Type) {
@@ -2686,23 +2770,23 @@ function Do-CastSpell {
             $enemyDef = if ($edef.Defense) { $edef.Defense } else { 0 }
             if ($spell.ArmorPen) { $enemyDef = [Math]::Floor($enemyDef / 2) }
             $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
-            $g.EnemyHP -= $dmg
-            Write-Combat "$($spell.Name)! You hit $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
-            if ($spell.Effect -eq "slow")  { $script:GS.SpellSlowActive  = $true; Write-Info "$($edef.Name) is slowed!" }
+            $inst.HP -= $dmg
+            Write-Combat "$($spell.Name)! You hit $($edef.Name) for $dmg magic damage!  ($([Math]::Max(0,$inst.HP))/$($inst.MaxHP) HP)"
+            if ($spell.Effect -eq "slow")  { $inst.SlowPenalty = 2; Write-Info "$($edef.Name) is slowed!" }
             if ($spell.Effect -eq "stun" -and (Get-Random -Minimum 1 -Maximum 101) -le 30) {
-                $script:GS.SpellStunActive = $true; Write-Info "$($edef.Name) is stunned and will skip their next attack!"
+                $inst.Stunned = $true; Write-Info "$($edef.Name) is stunned!"
             }
-            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+            if ($inst.HP -le 0) { Resolve-SingleKill $tgt.Idx; return }
         }
         "leech" {
             $roll     = Get-Random -Minimum 1 -Maximum 7
             $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
             $dmg  = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
             $heal = [Math]::Max(1, [Math]::Floor($dmg / 2))
-            $g.EnemyHP -= $dmg
+            $inst.HP -= $dmg
             $g.HP = [Math]::Min($g.MaxHP, $g.HP + $heal)
-            Write-Combat "Life Leech! You drain $dmg HP from $($edef.Name) and restore $heal HP!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
-            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+            Write-Combat "Life Leech! You drain $dmg HP from $($edef.Name) and restore $heal HP!  ($([Math]::Max(0,$inst.HP))/$($inst.MaxHP) HP)"
+            if ($inst.HP -le 0) { Resolve-SingleKill $tgt.Idx; return }
         }
         "heal" {
             $healAmt = $g.INT * 3
@@ -2715,61 +2799,59 @@ function Do-CastSpell {
 
 function Enemy-Attack {
     $g = $script:GS
-    $edef = $script:EnemyDB[$g.CurrentEnemy]
-    if (-not $edef) { return }
+    if (-not $g.InCombat) { return }
 
-    # Spell stun check (stun skips enemy turn entirely)
-    if ($g.SpellStunActive) {
-        Write-Info "$($edef.Name) is stunned and cannot act!"
-        $g.SpellStunActive = $false
-        $g.CombatRound++
-        Update-CombatWindow; Update-HUD
-        return
-    }
-    # Spell slow (reduces enemy attack)
-    $slowPenalty = 0
-    if ($g.SpellSlowActive) { $slowPenalty = 2; $g.SpellSlowActive = $false; Write-Info "$($edef.Name)'s movement is sluggish." }
-    # Distract dodge chance
-    if ($g.DistractActive) {
-        if ((Get-Random -Minimum 1 -Maximum 101) -le 40) {
+    $anyAlive = $false
+    foreach ($inst in $g.CombatEnemies) {
+        if ($inst.HP -le 0) { continue }
+        $anyAlive = $true
+        $edef = Get-EnemyDef $inst.Id $g.Floor
+
+        # Stun check
+        if ($inst.Stunned) {
+            Write-Info "$($edef.Name) is stunned and cannot act!"
+            $inst.Stunned = $false
+            continue
+        }
+        # Slow penalty
+        $slow = $inst.SlowPenalty; $inst.SlowPenalty = 0
+        if ($slow -gt 0) { Write-Info "$($edef.Name)'s attacks are sluggish." }
+        # Distract dodge (only applies to the full round)
+        if ($g.DistractActive -and (Get-Random -Minimum 1 -Maximum 101) -le 40) {
             Write-Info "The distraction works! $($edef.Name) misses you entirely."
-            $g.DistractActive = $false
-            $g.CombatRound++
-            return
+            continue
         }
-        $g.DistractActive = $false
-    }
-
-    # Hide stealth: if hiding, enemy might not target you
-    if ($g.PlayerHiding) {
-        if ((Get-Random -Minimum 1 -Maximum 101) -le 60) {
-            Write-Info "$($edef.Name) doesn't see you while you're hidden."
-            $g.CombatRound++
-            return
-        } else {
-            $g.PlayerHiding = $false
-            Write-Warn "$($edef.Name) spots you! Stealth broken."
+        # Hide stealth
+        if ($g.PlayerHiding) {
+            if ((Get-Random -Minimum 1 -Maximum 101) -le 60) {
+                Write-Info "$($edef.Name) doesn't see you while you're hidden."
+                continue
+            } else {
+                $g.PlayerHiding = $false
+                Write-Warn "$($edef.Name) spots you! Stealth broken."
+            }
         }
-    }
 
-    $eAtk  = if ($edef.Attack)  { $edef.Attack  } else { 3 }
-    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense) - $slowPenalty)
-    $g.HP -= $eDmg
-    Write-Combat "$($edef.Name) hits you for $eDmg damage! HP: $($g.HP)/$($g.MaxHP)"
-    if ($g.HP -le 0) { Resolve-CombatDeath; return }
+        $eAtk = if ($edef.Attack) { $edef.Attack } else { 3 }
+        $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense) - $slow)
+        $g.HP -= $eDmg
+        Write-Combat "$($edef.Name) hits you for $eDmg damage! Your HP: $($g.HP)/$($g.MaxHP)"
+        if ($g.HP -le 0) { Resolve-CombatDeath; return }
+    }
+    $g.DistractActive = $false
     $g.CombatRound++
-    Update-HUD
+    Update-CombatWindow; Update-HUD
 }
 
 function Do-Taunt {
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "Taunting works best in combat."; return }
-    $edef = $script:EnemyDB[$g.CurrentEnemy]
+    $tgt = Get-CurrentTarget
+    if (-not $tgt) { return }
+    $edef = $tgt.Def
     Add-Viewers -Min 10 -Max 40
     Write-Info "The crowd loves it. +viewers."
-    # Taunt increases enemy aggression - slight damage boost to them, but enemy focuses ONLY you
     Write-Combat "You taunt $($edef.Name)! They focus entirely on you. Dangerous."
-    # Enemy immediately attacks in rage
     $eDmg = [Math]::Max(1, (if ($edef.Attack){$edef.Attack}else{3}) + (Get-Random -Minimum 1 -Maximum 5) - (Get-TotalDefense))
     $g.HP -= $eDmg
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
@@ -2786,7 +2868,8 @@ function Do-Distract {
         $g.DistractActive = $true
         Write-Info "You create a distraction. Next enemy attack has 40% chance to miss."
     } else {
-        Write-Warn "Distraction attempt failed. $($script:EnemyDB[$g.CurrentEnemy].Name) isn't fooled."
+        $tgt = Get-CurrentTarget
+        Write-Warn "Distraction attempt failed. $(if($tgt){$tgt.Def.Name}else{'The enemy'}) isn't fooled."
     }
 }
 
@@ -2796,9 +2879,9 @@ function Do-Flee {
     $g.AchieveStat_flee_count++
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.DEX
     if ($roll -ge 13) {
-        $edef = $script:EnemyDB[$g.CurrentEnemy]
-        Write-Info "You flee from $($edef.Name)!"
-        $g.InCombat = $false; $g.CurrentEnemy = $null
+        $firstName = if ($g.CombatEnemies.Count -gt 0) { (Get-EnemyDef $g.CombatEnemies[0].Id $g.Floor).Name } else { "the enemy" }
+        Write-Info "You flee from $firstName!"
+        $g.InCombat = $false; $g.CombatEnemies = @()
         $g.PlayerHiding = $false; $g.DistractActive = $false
         # Move back to a connected room
         $room = $script:RoomDB[$g.CurrentRoom]
@@ -2808,17 +2891,21 @@ function Do-Flee {
             Enter-Room $dest
         }
     } else {
-        Write-Warn "Can't escape! $($script:EnemyDB[$g.CurrentEnemy].Name) blocks the way."
+        $blockName = if ($g.CombatEnemies.Count -gt 0) { (Get-EnemyDef $g.CombatEnemies[0].Id $g.Floor).Name } else { "The enemy" }
+        Write-Warn "Can't escape! $blockName blocks the way."
         Enemy-Attack
     }
     Update-HUD
 }
 
-function Resolve-CombatVictory {
-    $g = $script:GS
-    $edef = $script:EnemyDB[$g.CurrentEnemy]
-    $expGain  = (if ($edef.XP)   { $edef.XP }   else { 10 }) + (Get-Random -Minimum 0 -Maximum 11)
-    $goldBase = if ($edef.Gold -is [array]) { Get-Random -Minimum $edef.Gold[0] -Maximum ($edef.Gold[1]+1) } else { if($edef.Gold){$edef.Gold}else{3} }
+function Resolve-SingleKill {
+    param([int]$EnemyIdx)
+    $g    = $script:GS
+    $inst = $g.CombatEnemies[$EnemyIdx]
+    $inst.HP = 0
+    $edef = Get-EnemyDef $inst.Id $g.Floor
+    $expGain  = (if ($edef.XP) { $edef.XP } else { 10 }) + (Get-Random -Minimum 0 -Maximum 11)
+    $goldBase = if ($edef.Gold -is [array]) { Get-Random -Minimum $edef.Gold[0] -Maximum ($edef.Gold[1]+1) } elseif ($edef.GoldMin -ne $null) { Get-Random -Minimum $edef.GoldMin -Maximum ($edef.GoldMax+1) } else { 3 }
     $goldGain = $goldBase + (Get-Random -Minimum 0 -Maximum 6)
     $g.EXP += $expGain; $g.Gold += $goldGain; $g.Kills++
     if ($edef.Type -eq "goblin") { $g.AchieveStat_goblin_kills++ }
@@ -2828,10 +2915,8 @@ function Resolve-CombatVictory {
     }
     if ($g.Kills -eq 1) { Grant-Achievement "first_blood" }
     if ($g.HP -le 5 -and $g.HP -gt 0) { Grant-Achievement "survive_low_hp" }
-    $script:CombatSummaryText = "$($edef.Name) defeated!`n+$expGain EXP   +$goldGain gold"
-    Write-Loot "=== VICTORY! ==="
     Write-Loot "$($edef.Name) defeated!  +$expGain EXP  +$goldGain gold"
-    # Drop items
+    # Item drops
     if ($edef.Drops -and $edef.Drops.Count -gt 0) {
         foreach ($drop in $edef.Drops) {
             if ((Get-Random -Minimum 1 -Maximum 101) -le $(if ($null -ne $drop.Chance) { $drop.Chance } else { 50 })) {
@@ -2841,33 +2926,50 @@ function Resolve-CombatVictory {
             }
         }
     }
-    # Boss map drop - auto-applied to mini-map
+    # Boss map drop
     if ($edef.IsBoss -and $edef.BossType) {
         $mapId = $script:MapDropItems[$edef.BossType]
-        if ($mapId) {
-            $g.Inventory += @($mapId)
-            Apply-MapDrop $mapId   # auto-apply immediately
-        }
+        if ($mapId) { $g.Inventory += @($mapId); Apply-MapDrop $mapId }
     }
-    # Remove enemy from room
+    # Remove from room enemies list
     $room = $script:RoomDB[$g.CurrentRoom]
-    if ($room.Enemies) { $room.Enemies = $room.Enemies | Where-Object { $_ -ne $g.CurrentEnemy } }
-    if ($room.BossRoom) { $room.BossDefeated = $true }
-    # Britta quest: dogs cleared
-    if ($g.GameFlags["BrittaWaitingDogs"] -and $g.CurrentRoom -eq "f1_parking_garage" -and $room.Enemies.Count -eq 0) {
-        $g.GameFlags["BrittaWaitingDogs"] = $false
-        $g.GameFlags["BrittaHelped"] = $true
+    if ($room.Enemies) { $room.Enemies = @($room.Enemies | Where-Object { $_ -ne $inst.Id }) }
+    if ($room.BossRoom -and $edef.IsBoss) { $room.BossDefeated = $true }
+    # Britta quest
+    if ($g.GameFlags["BrittaWaitingDogs"] -and $g.CurrentRoom -eq "f1_parking_garage" -and (Get-AliveEnemyCount) -eq 0) {
+        $g.GameFlags["BrittaWaitingDogs"] = $false; $g.GameFlags["BrittaHelped"] = $true
         $g.Inventory += @("health_potion")
-        Write-Loot "You cleared the dogs. Britta waves you over. 'Here -- from the kit. You earned it.' She hands you a health potion."
-        Write-Info "Britta: 'I've got a plan. Not a good one. But a plan. Talk to me again when things settle.'"
+        Write-Loot "You cleared the dogs. Britta waves you over. She hands you a health potion."
         Grant-Achievement "helped_britta"
     }
-    $g.InCombat = $false; $g.CurrentEnemy = $null; $g.EnemyHP = 0
+
+    # Auto-select next alive target
+    $nextAlive = -1
+    for ($i = 0; $i -lt $g.CombatEnemies.Count; $i++) {
+        if ($g.CombatEnemies[$i].HP -gt 0) { $nextAlive = $i; break }
+    }
+    if ($nextAlive -ge 0) {
+        $g.SelectedTarget = $nextAlive
+        $nextEdef = Get-EnemyDef $g.CombatEnemies[$nextAlive].Id $g.Floor
+        Write-Combat "Target: $($nextEdef.Name)  ($($g.CombatEnemies[$nextAlive].HP)/$($g.CombatEnemies[$nextAlive].MaxHP) HP)"
+        Update-CombatWindow; Update-HUD
+        Enemy-Attack
+    } else {
+        Resolve-CombatVictory
+    }
+}
+
+function Resolve-CombatVictory {
+    $g = $script:GS
+    Write-Loot "=== VICTORY! === All enemies defeated!"
+    $script:CombatSummaryText = "All enemies defeated!"
+    $g.InCombat = $false
+    $g.CombatEnemies = @()
     $g.PlayerHiding = $false; $g.DistractActive = $false
     Check-LevelUp
     Check-AllAchievements
-    Update-HUD
-    Render-MiniMap
+    Update-HUD; Render-MiniMap
+    if ($script:CombatWinControls) { Show-CombatEndScreen }
 }
 
 function Resolve-CombatDeath {
@@ -2880,7 +2982,7 @@ function Resolve-CombatDeath {
         $btnNew = $script:Window.FindName("btnNewGame")
         if ($btnNew) { $btnNew.Visibility = "Visible" }
     })
-    $g.InCombat = $false
+    $g.InCombat = $false; $g.CombatEnemies = @()
 }
 
 function Check-LevelUp {
@@ -2935,14 +3037,51 @@ $script:SpellDB = @{
 function Update-CombatWindow {
     $ctrl = $script:CombatWinControls
     if (-not $ctrl) { return }
-    $g    = $script:GS
-    $edef = if ($g.CurrentEnemy) { $script:EnemyDB[$g.CurrentEnemy] } else { $null }
+    $g = $script:GS
 
-    if ($edef -and $g.EnemyMaxHP -gt 0) {
-        $ctrl.lblCEnemyHP.Text  = "$($g.EnemyHP) / $($g.EnemyMaxHP)"
-        $ctrl.barCEnemyHP.Value = [Math]::Max(0,[Math]::Round(($g.EnemyHP/$g.EnemyMaxHP)*100))
-        $ctrl.lblCEnemyDef.Text = "DEF: $(if($edef.Defense){$edef.Defense}else{0})"
+    # Refresh enemy panels
+    if ($ctrl.enemyPanels) {
+        for ($i = 0; $i -lt $ctrl.enemyPanels.Count; $i++) {
+            $panel = $ctrl.enemyPanels[$i]
+            $ce = $g.CombatEnemies[$i]
+            if (-not $ce) { continue }
+            $isSelected = ($i -eq $g.SelectedTarget -and $ce.HP -gt 0)
+            $isDead     = ($ce.HP -le 0)
+
+            try {
+                $conv = [System.Windows.Media.BrushConverter]::new()
+                if ($isDead) {
+                    $panel.Border.Background  = $conv.ConvertFromString("#050505")
+                    $panel.Border.BorderBrush = $conv.ConvertFromString("#1A1A1A")
+                    $panel.NameText.Foreground = $conv.ConvertFromString("#333333")
+                    $panel.HPText.Text = "DEFEATED"
+                    $panel.HPBar.Value = 0
+                } elseif ($isSelected) {
+                    $panel.Border.Background  = $conv.ConvertFromString("#1A0808")
+                    $panel.Border.BorderBrush = $conv.ConvertFromString("#FF3B30")
+                    $panel.NameText.Foreground = $conv.ConvertFromString("#FF6B60")
+                    $panel.HPText.Text = "$($ce.HP) / $($ce.MaxHP)"
+                    $panel.HPBar.Value = [Math]::Max(0,[Math]::Round($ce.HP / $ce.MaxHP * 100))
+                } else {
+                    $panel.Border.Background  = $conv.ConvertFromString("#0A0505")
+                    $panel.Border.BorderBrush = $conv.ConvertFromString("#3A2020")
+                    $panel.NameText.Foreground = $conv.ConvertFromString("#C05040")
+                    $panel.HPText.Text = "$($ce.HP) / $($ce.MaxHP)"
+                    $panel.HPBar.Value = [Math]::Max(0,[Math]::Round($ce.HP / $ce.MaxHP * 100))
+                }
+            } catch {}
+        }
+        # Update selected enemy info text
+        $selIdx = $g.SelectedTarget
+        if ($selIdx -lt $g.CombatEnemies.Count -and $g.CombatEnemies[$selIdx].HP -gt 0) {
+            $selEdef = Get-EnemyDef $g.CombatEnemies[$selIdx].Id $g.Floor
+            $ctrl.lblCEnemyDesc.Text    = if ($selEdef.Desc) { $selEdef.Desc } else { "" }
+            $ctrl.lblCEnemySpecial.Text = if ($selEdef.Special) { "Special: $($selEdef.Special) ($($selEdef.SpecialChance)% chance)" } else { "" }
+            $ctrl.lblCEnemyDef.Text     = "DEF: $(if($selEdef.Defense){$selEdef.Defense}else{0})  |  Click an enemy to change target"
+        }
     }
+
+    # Player bars
     if ($g.MaxHP -gt 0) {
         $ctrl.lblCPlayerHP.Text  = "$($g.HP) / $($g.MaxHP)"
         $ctrl.barCPlayerHP.Value = [Math]::Max(0,[Math]::Round(($g.HP/$g.MaxHP)*100))
@@ -2951,18 +3090,14 @@ function Update-CombatWindow {
         $ctrl.lblCPlayerMP.Text  = "$($g.MP) / $($g.MaxMP)"
         $ctrl.barCPlayerMP.Value = [Math]::Max(0,[Math]::Round(($g.MP/$g.MaxMP)*100))
     }
-    $ctrl.lblCRound.Text  = "Round $($g.CombatRound)"
+    $ctrl.lblCRound.Text = "Round $($g.CombatRound)"
     $statusParts = @()
     if ($g.PlayerHiding)   { $statusParts += "HIDDEN" }
-    if ($g.DistractActive) { $statusParts += "DISTRACTED" }
-    $ctrl.lblCStatus.Text = $statusParts -join "  |  "
-
-    $ctrl.btnCSpell.IsEnabled    = ($g.MP -ge 2)
-    $ctrl.btnCSpell.Content      = "SPELL  (2 MP)"
-    $hasConsumables = @($g.Inventory | Where-Object { $i=$script:ItemDB[$_]; $i -and $i.Type -eq "consumable" })
-    $ctrl.btnCItem.IsEnabled     = ($hasConsumables.Count -gt 0)
-    $ctrl.btnCHide.IsEnabled     = (-not $g.PlayerHiding)
-    $ctrl.btnCDistract.IsEnabled = (-not $g.DistractActive)
+    if ($g.DistractActive) { $statusParts += "DISTRACT" }
+    $ctrl.lblCStatus.Text = $statusParts -join " | "
+    $ctrl.btnCSpell.IsEnabled = ($g.MP -ge 2 -and $g.KnownSpells -and $g.KnownSpells.Count -gt 0)
+    $tgt = Get-CurrentTarget
+    $ctrl.btnCTalk.Visibility = if ($tgt -and $tgt.Def.CanTalk) { "Visible" } else { "Collapsed" }
 }
 
 function Show-CombatEndScreen {
@@ -3110,17 +3245,15 @@ function Show-CombatItemPicker {
 }
 
 function Show-CombatWindow {
-    param([string]$EnemyId)
-    $g    = $script:GS
-    $edef = $script:EnemyDB[$EnemyId]
-    if (-not $edef) { return }
+    $g = $script:GS
+    if ($g.CombatEnemies.Count -eq 0) { return }
 
     $script:CombatSummaryText = ""
 
     $cwXaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Combat" Width="700" Height="540"
+        Title="Combat" Width="700" Height="560"
         WindowStyle="None" Background="#0F0F0F"
         ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
   <Window.Resources>
@@ -3153,6 +3286,7 @@ function Show-CombatWindow {
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
@@ -3160,38 +3294,32 @@ function Show-CombatWindow {
       </Grid.RowDefinitions>
 
       <!-- Drag bar / title -->
-      <Border x:Name="dragBar" Grid.Row="0" Background="Transparent" Cursor="SizeAll" Margin="0,0,0,10">
+      <Border x:Name="dragBar" Grid.Row="0" Background="Transparent" Cursor="SizeAll" Margin="0,0,0,8">
         <TextBlock Text="--- COMBAT ---" Foreground="#FF3B30" FontFamily="Consolas"
                    FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
       </Border>
 
-      <!-- Enemy info row -->
-      <Grid Grid.Row="1" Margin="0,0,0,6">
+      <!-- Enemy panels (populated dynamically) -->
+      <StackPanel x:Name="enemyContainer" Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6"/>
+
+      <!-- Selected-enemy detail row -->
+      <Grid Grid.Row="2" Margin="0,0,0,4">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="210"/>
+          <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock x:Name="lblCEnemy"       Foreground="#FF6B60" FontFamily="Consolas" FontSize="20" FontWeight="Bold"/>
-          <TextBlock x:Name="lblCEnemyDesc"   Foreground="#6E6E73" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Margin="0,2,12,0"/>
-          <TextBlock x:Name="lblCEnemySpecial" Foreground="#FFB020" FontFamily="Consolas" FontSize="10" Margin="0,3,0,0" FontStyle="Italic"/>
+          <TextBlock x:Name="lblCEnemyDesc"    Foreground="#6E6E73" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Margin="0,0,12,0"/>
+          <TextBlock x:Name="lblCEnemySpecial" Foreground="#FFB020" FontFamily="Consolas" FontSize="10" Margin="0,2,0,0" FontStyle="Italic"/>
         </StackPanel>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <DockPanel Margin="0,0,0,3">
-            <TextBlock Text="HP " Foreground="#6E6E73" FontFamily="Consolas" FontSize="11"/>
-            <TextBlock x:Name="lblCEnemyHP"  Foreground="#FF453A" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
-          </DockPanel>
-          <ProgressBar x:Name="barCEnemyHP" Height="18" Minimum="0" Maximum="100" Value="100"
-                       Foreground="#FF3B30" Background="#2A0808" BorderThickness="0"/>
-          <TextBlock x:Name="lblCEnemyDef" Foreground="#FFB020" FontFamily="Consolas" FontSize="10"
-                     HorizontalAlignment="Right" Margin="0,5,0,0"/>
-        </StackPanel>
+        <TextBlock x:Name="lblCEnemyDef" Grid.Column="1" Foreground="#FFB020" FontFamily="Consolas"
+                   FontSize="10" VerticalAlignment="Bottom"/>
       </Grid>
 
-      <Rectangle Grid.Row="2" Fill="#2A2A2A" Height="1" Margin="0,2,0,4"/>
+      <Rectangle Grid.Row="3" Fill="#2A2A2A" Height="1" Margin="0,2,0,4"/>
 
       <!-- Combat log -->
-      <Border Grid.Row="3" Background="#060608" BorderBrush="#1C1C1E" BorderThickness="1" Margin="0,0,0,4">
+      <Border Grid.Row="4" Background="#060608" BorderBrush="#1C1C1E" BorderThickness="1" Margin="0,0,0,4">
         <ScrollViewer x:Name="svCLog" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0">
           <RichTextBox x:Name="rtbCLog" Background="Transparent" BorderThickness="0"
                        Foreground="#C8C8C8" FontFamily="Consolas" FontSize="11"
@@ -3200,10 +3328,10 @@ function Show-CombatWindow {
         </ScrollViewer>
       </Border>
 
-      <Rectangle Grid.Row="4" Fill="#2A2A2A" Height="1" Margin="0,4,0,8"/>
+      <Rectangle Grid.Row="5" Fill="#2A2A2A" Height="1" Margin="0,4,0,8"/>
 
       <!-- Player bars -->
-      <Grid Grid.Row="5" Margin="0,0,0,10">
+      <Grid Grid.Row="6" Margin="0,0,0,10">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
@@ -3232,7 +3360,7 @@ function Show-CombatWindow {
       </Grid>
 
       <!-- Action buttons (2 x 4) -->
-      <UniformGrid Grid.Row="6" Rows="2" Columns="4">
+      <UniformGrid Grid.Row="7" Rows="2" Columns="4">
         <Button x:Name="btnCAttack"   Content="ATTACK"    Margin="2,2"/>
         <Button x:Name="btnCSpell"    Content="SPELL"     Margin="2,2"/>
         <Button x:Name="btnCTaunt"    Content="TAUNT"     Margin="2,2"/>
@@ -3244,7 +3372,7 @@ function Show-CombatWindow {
       </UniformGrid>
 
       <!-- End-of-combat overlay -->
-      <Border x:Name="panelEnd" Grid.Row="0" Grid.RowSpan="7" Background="#E50F0F0F" Visibility="Collapsed">
+      <Border x:Name="panelEnd" Grid.Row="0" Grid.RowSpan="8" Background="#E50F0F0F" Visibility="Collapsed">
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40,0">
           <TextBlock x:Name="lblCEndTitle"   FontFamily="Consolas" FontSize="32" FontWeight="Bold"
                      HorizontalAlignment="Center" Margin="0,0,0,14"/>
@@ -3271,12 +3399,62 @@ function Show-CombatWindow {
     $cw.Owner = $script:Window
     $script:CombatWindowRef = $cw
 
+    # Build per-enemy panels dynamically
+    $enemyContainer = $cw.FindName("enemyContainer")
+    $conv           = [System.Windows.Media.BrushConverter]::new()
+    $enemyPanels    = @()
+    $enemyCount     = $g.CombatEnemies.Count
+    $panelW         = [Math]::Max(120, [Math]::Floor(660 / [Math]::Max(1, $enemyCount)) - 6)
+
+    for ($ei = 0; $ei -lt $enemyCount; $ei++) {
+        $ce   = $g.CombatEnemies[$ei]
+        $edef = Get-EnemyDef $ce.Id $g.Floor
+
+        $border                 = [System.Windows.Controls.Border]::new()
+        $border.Width           = $panelW
+        $border.BorderThickness = [System.Windows.Thickness]::new(2)
+        $border.Margin          = [System.Windows.Thickness]::new(0,0,4,0)
+        $border.Padding         = [System.Windows.Thickness]::new(6,5)
+        $border.Cursor          = [System.Windows.Input.Cursors]::Hand
+
+        $sp       = [System.Windows.Controls.StackPanel]::new()
+        $nameTB   = [System.Windows.Controls.TextBlock]::new()
+        $nameTB.FontFamily   = [System.Windows.Media.FontFamily]::new("Consolas")
+        $nameTB.FontSize     = 12
+        $nameTB.FontWeight   = [System.Windows.FontWeights]::Bold
+        $nameTB.Text         = if ($edef -and $edef.Name) { $edef.Name } else { $ce.Id }
+        $nameTB.TextWrapping = [System.Windows.TextWrapping]::Wrap
+
+        $hpBar                 = [System.Windows.Controls.ProgressBar]::new()
+        $hpBar.Height          = 10
+        $hpBar.Minimum         = 0
+        $hpBar.Maximum         = 100
+        $hpBar.Value           = 100
+        $hpBar.Foreground      = $conv.ConvertFromString("#FF3B30")
+        $hpBar.Background      = $conv.ConvertFromString("#2A0808")
+        $hpBar.BorderThickness = [System.Windows.Thickness]::new(0)
+        $hpBar.Margin          = [System.Windows.Thickness]::new(0,3,0,2)
+
+        $hpTB          = [System.Windows.Controls.TextBlock]::new()
+        $hpTB.FontFamily = [System.Windows.Media.FontFamily]::new("Consolas")
+        $hpTB.FontSize   = 10
+        $hpTB.Text       = "$($ce.HP) / $($ce.MaxHP)"
+
+        [void]$sp.Children.Add($nameTB)
+        [void]$sp.Children.Add($hpBar)
+        [void]$sp.Children.Add($hpTB)
+        $border.Child = $sp
+
+        $clickHandler = [ScriptBlock]::Create("`$script:GS.SelectedTarget = $ei; Update-CombatWindow")
+        $border.Add_MouseLeftButtonDown($clickHandler)
+        [void]$enemyContainer.Children.Add($border)
+        $enemyPanels += @(@{ Border=$border; NameText=$nameTB; HPBar=$hpBar; HPText=$hpTB })
+    }
+
     $ctrl = @{
-        lblCEnemy       = $cw.FindName("lblCEnemy")
+        enemyPanels     = $enemyPanels
         lblCEnemyDesc   = $cw.FindName("lblCEnemyDesc")
         lblCEnemySpecial= $cw.FindName("lblCEnemySpecial")
-        lblCEnemyHP     = $cw.FindName("lblCEnemyHP")
-        barCEnemyHP     = $cw.FindName("barCEnemyHP")
         lblCEnemyDef    = $cw.FindName("lblCEnemyDef")
         rtbCLog         = $cw.FindName("rtbCLog")
         svCLog          = $cw.FindName("svCLog")
@@ -3304,23 +3482,8 @@ function Show-CombatWindow {
     $script:CombatWinControls = $ctrl
     $script:CombatLogRTB      = $ctrl.rtbCLog
 
-    # Populate static enemy info
-    $ctrl.lblCEnemy.Text     = $edef.Name
-    $ctrl.lblCEnemyDesc.Text = if ($edef.Desc) { $edef.Desc } else { "" }
-    $ctrl.lblCEnemySpecial.Text = if ($edef.Special) {
-        "Special: $($edef.Special) ($($edef.SpecialChance)% chance per round)"
-    } else { "" }
-    if ($edef.CanTalk) { $ctrl.btnCTalk.Visibility = "Visible" }
-
-    # Enable window dragging on the title bar
     $ctrl.dragBar.Add_MouseLeftButtonDown({ $cw.DragMove() })
-
-    # Initial state
     Update-CombatWindow
-
-    # ---- Action button wiring ----
-    # Each handler calls a game function, then checks if combat ended.
-    # All references use $script: variables so closure capture is not needed.
 
     $ctrl.btnCAttack.Add_Click({
         Do-Attack
@@ -3364,9 +3527,7 @@ function Show-CombatWindow {
     $ctrl.btnCFlee.Add_Click({
         Do-Flee
         Update-CombatWindow; Update-HUD
-        if (-not $script:GS.InCombat) {
-            $script:CombatWindowRef.Close()
-        }
+        if (-not $script:GS.InCombat) { $script:CombatWindowRef.Close() }
     })
     $ctrl.btnCContinue.Add_Click({
         $script:CombatWindowRef.Close()
@@ -3374,7 +3535,6 @@ function Show-CombatWindow {
 
     $cw.ShowDialog() | Out-Null
 
-    # Cleanup
     $script:CombatLogRTB      = $null
     $script:CombatWinControls = $null
     $script:CombatWindowRef   = $null
