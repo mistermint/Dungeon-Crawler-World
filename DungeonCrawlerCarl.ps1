@@ -157,7 +157,7 @@ $xaml = @"
                         <TextBlock x:Name="TxtHP" Style="{StaticResource SDim}" Text="100 / 100" HorizontalAlignment="Right"/>
 
                         <TextBlock Style="{StaticResource SHdr}" Text="MANA (MP)"/>
-                        <ProgressBar x:Name="BarMP" Height="14" Minimum="0" Maximum="10" Value="10"
+                        <ProgressBar x:Name="BarMP" Height="14" Minimum="0" Maximum="100" Value="100"
                                      Background="#2C2C2E" Foreground="#0A84FF" Margin="0,2,0,2"/>
                         <TextBlock x:Name="TxtMP" Style="{StaticResource SDim}" Text="10 / 10" HorizontalAlignment="Right"/>
 
@@ -577,25 +577,51 @@ $script:MordecaiDialogue = @{
 # ACHIEVEMENT DATABASE
 # ============================================================
 $script:AchievementDB = @{
-    "first_blood"     = @{ Name="First Blood";               Desc="Kill your first enemy.";                              ViewerBonus=5000;   BoxReward="iron" }
-    "goblin_hoover"   = @{ Name="Goblin Hoover";             Desc="Kill 10 exploding goblins.";                         ViewerBonus=25000;  BoxReward="bronze"; Threshold=10; Stat="goblin_kills" }
-    "pacifist"        = @{ Name="Reluctant Pacifist";        Desc="Flee from 5 fights.";                                ViewerBonus=8000;   BoxReward="iron";   Threshold=5;  Stat="flee_count" }
-    "hoarder"         = @{ Name="Hoarder";                   Desc="Carry 15 or more items.";                            ViewerBonus=10000;  BoxReward="bronze" }
-    "box_addict"      = @{ Name="Loot Goblin";               Desc="Open 10 loot boxes.";                                ViewerBonus=30000;  BoxReward="silver"; Threshold=10; Stat="boxes_opened" }
-    "floor2_clear"    = @{ Name="Tutorial Dropout";          Desc="Complete Floor 2.";                                  ViewerBonus=50000;  BoxReward="silver" }
-    "selection_gate"  = @{ Name="Evolutionary Milestone";   Desc="Enter the Selection Gate on Floor 3.";               ViewerBonus=100000; BoxReward="gold" }
-    "boss_slayer"     = @{ Name="Boss Slayer";               Desc="Defeat your first floor boss.";                      ViewerBonus=75000;  BoxReward="gold" }
-    "five_bosses"     = @{ Name="Apex Predator";             Desc="Defeat 5 bosses.";                                   ViewerBonus=200000; BoxReward="platinum"; Threshold=5; Stat="boss_kills" }
-    "jug_o_boom"      = @{ Name="Carl's Heir";               Desc="Craft and use Carl's Jug O' Boom.";                 ViewerBonus=50000;  BoxReward="gold" }
-    "floor5_banners"  = @{ Name="Castle Collector";          Desc="Capture all 4 castles on Floor 5.";                 ViewerBonus=150000; BoxReward="platinum" }
-    "survive_hunting" = @{ Name="The Prey That Fights Back"; Desc="Reach Floor 7 after surviving the Hunting Grounds."; ViewerBonus=250000; BoxReward="platinum" }
-    "subscriber_1m"   = @{ Name="One Million";               Desc="Reach 1,000,000 viewers.";                           ViewerBonus=0;      BoxReward="celestial" }
-    "floor10_entry"   = @{ Name="Endgame";                   Desc="Reach Floor 10.";                                    ViewerBonus=500000; BoxReward="celestial" }
-    "boring_crawler"  = @{ Name="Most Boring Crawler";       Desc="Let your viewers drop below 50.";                   ViewerBonus=2000;   BoxReward="iron" }
-    "crafting_nerd"   = @{ Name="Crafting Enthusiast";       Desc="Craft 3 different items.";                           ViewerBonus=15000;  BoxReward="bronze"; Threshold=3; Stat="crafts_made" }
-    "smooth_talker"   = @{ Name="Smooth Talker";             Desc="Successfully talk your way out of 3 fights.";        ViewerBonus=20000;  BoxReward="bronze"; Threshold=3; Stat="talk_escapes" }
-    "explorer"        = @{ Name="Thorough";                  Desc="Interact with 10 environment objects.";              ViewerBonus=12000;  BoxReward="iron";   Threshold=10; Stat="interact_count" }
-    "mordecai_fan"    = @{ Name="Actually Listening";        Desc="Speak with Mordecai on 5 different floors.";         ViewerBonus=18000;  BoxReward="bronze"; Threshold=5; Stat="mordecai_talks" }
+    # COMBAT
+    "first_blood"      = @{ Name="First Blood";               Desc="Kill your first enemy.";                               ViewerBonus=5000;   BoxReward="iron" }
+    "kill_10"          = @{ Name="Dungeon Regular";            Desc="Kill 10 enemies.";                                     ViewerBonus=10000;  BoxReward="iron";      Threshold=10;    Stat="Kills" }
+    "kill_50"          = @{ Name="Monster Problem Solver";     Desc="Kill 50 enemies.";                                     ViewerBonus=40000;  BoxReward="bronze";    Threshold=50;    Stat="Kills" }
+    "kill_100"         = @{ Name="Carnage Artisan";            Desc="Kill 100 enemies.";                                    ViewerBonus=100000; BoxReward="silver";    Threshold=100;   Stat="Kills" }
+    "boss_slayer"      = @{ Name="Boss Slayer";                Desc="Defeat your first floor boss.";                        ViewerBonus=75000;  BoxReward="gold" }
+    "five_bosses"      = @{ Name="Apex Predator";              Desc="Defeat 5 bosses.";                                     ViewerBonus=200000; BoxReward="platinum";  Threshold=5;     Stat="boss_kills" }
+    "goblin_hoover"    = @{ Name="Goblin Hoover";              Desc="Kill 10 exploding goblins.";                           ViewerBonus=25000;  BoxReward="bronze";    Threshold=10;    Stat="goblin_kills" }
+    "survive_low_hp"   = @{ Name="On the Edge";                Desc="Survive a hit that left you at 5 HP or less.";         ViewerBonus=20000;  BoxReward="iron" }
+    "pacifist"         = @{ Name="Reluctant Pacifist";         Desc="Flee from 5 fights.";                                  ViewerBonus=8000;   BoxReward="iron";      Threshold=5;     Stat="flee_count" }
+    "ghost"            = @{ Name="You Never Saw Me";           Desc="Successfully hide 5 times in combat.";                 ViewerBonus=12000;  BoxReward="iron";      Threshold=5;     Stat="stealth_count" }
+    # EXPLORATION
+    "explorer10"       = @{ Name="Getting a Feel For It";      Desc="Visit 10 rooms.";                                      ViewerBonus=5000;   BoxReward="iron";      Threshold=10;    Stat="RoomsVisited" }
+    "explorer25"       = @{ Name="Dungeon Tourist";            Desc="Visit 25 rooms.";                                      ViewerBonus=15000;  BoxReward="bronze";    Threshold=25;    Stat="RoomsVisited" }
+    "explorer50"       = @{ Name="Thorough";                   Desc="Visit 50 rooms.";                                      ViewerBonus=40000;  BoxReward="silver";    Threshold=50;    Stat="RoomsVisited" }
+    "searcher"         = @{ Name="Leave No Stone Unturned";    Desc="Search 10 rooms.";                                     ViewerBonus=10000;  BoxReward="iron";      Threshold=10;    Stat="rooms_searched" }
+    "interact10"       = @{ Name="Actually Looking";           Desc="Interact with 10 environment objects.";                ViewerBonus=12000;  BoxReward="iron";      Threshold=10;    Stat="interact_count" }
+    "find_stairwell"   = @{ Name="Way Down";                   Desc="Discover the first stairwell.";                        ViewerBonus=10000;  BoxReward="iron" }
+    "floor2_clear"     = @{ Name="Tutorial Dropout";           Desc="Complete Floor 2.";                                    ViewerBonus=50000;  BoxReward="silver" }
+    "selection_gate"   = @{ Name="Evolutionary Milestone";     Desc="Enter the Selection Gate on Floor 3.";                 ViewerBonus=100000; BoxReward="gold" }
+    "floor5_banners"   = @{ Name="Castle Collector";           Desc="Capture all 4 castles on Floor 5.";                   ViewerBonus=150000; BoxReward="platinum" }
+    "survive_hunting"  = @{ Name="The Prey That Fights Back";  Desc="Reach Floor 7 after surviving the Hunting Grounds.";  ViewerBonus=250000; BoxReward="platinum" }
+    "floor10_entry"    = @{ Name="Endgame";                    Desc="Reach Floor 10.";                                      ViewerBonus=500000; BoxReward="celestial" }
+    # ITEMS & CRAFTING
+    "hoarder"          = @{ Name="Hoarder";                    Desc="Carry 15 or more items at once.";                      ViewerBonus=10000;  BoxReward="bronze" }
+    "first_equip"      = @{ Name="Gearing Up";                 Desc="Equip your first weapon or armor.";                   ViewerBonus=3000;   BoxReward="iron" }
+    "first_box"        = @{ Name="Mystery Acquired";           Desc="Open your first loot box.";                            ViewerBonus=5000;   BoxReward="iron" }
+    "box_addict"       = @{ Name="Loot Goblin";                Desc="Open 10 loot boxes.";                                  ViewerBonus=30000;  BoxReward="silver";    Threshold=10;    Stat="boxes_opened" }
+    "first_craft"      = @{ Name="MacGyver Mode";              Desc="Craft your first item.";                               ViewerBonus=8000;   BoxReward="iron" }
+    "crafting_nerd"    = @{ Name="Crafting Enthusiast";        Desc="Craft 3 items.";                                       ViewerBonus=15000;  BoxReward="bronze";    Threshold=3;     Stat="items_crafted" }
+    "jug_o_boom"       = @{ Name="Carl's Heir";                Desc="Craft and use Carl's Jug O' Boom.";                   ViewerBonus=50000;  BoxReward="gold" }
+    "rich"             = @{ Name="Comfortable";                Desc="Accumulate 200 gold.";                                 ViewerBonus=20000;  BoxReward="bronze";    Threshold=200;   Stat="Gold" }
+    # SOCIAL / DIALOGUE
+    "smooth_talker"    = @{ Name="Smooth Talker";              Desc="Successfully talk your way out of 3 fights.";          ViewerBonus=20000;  BoxReward="bronze";    Threshold=3;     Stat="talk_escapes" }
+    "mordecai_fan"     = @{ Name="Actually Listening";         Desc="Speak with Mordecai on 5 different floors.";           ViewerBonus=18000;  BoxReward="bronze";    Threshold=5;     Stat="mordecai_talks" }
+    "helped_britta"    = @{ Name="Basic Decency";              Desc="Help Britta Sorensen with her injury.";                ViewerBonus=15000;  BoxReward="bronze" }
+    # VIEWERS
+    "boring_crawler"   = @{ Name="Most Boring Crawler";        Desc="Let your viewers drop below 50.";                      ViewerBonus=2000;   BoxReward="iron" }
+    "viewers_1k"       = @{ Name="You Have Fans";              Desc="Reach 1,000 viewers.";                                 ViewerBonus=5000;   BoxReward="iron";      Threshold=1000;   Stat="ViewerPeak" }
+    "viewers_10k"      = @{ Name="Minor Celebrity";            Desc="Reach 10,000 viewers.";                                ViewerBonus=15000;  BoxReward="bronze";    Threshold=10000;  Stat="ViewerPeak" }
+    "viewers_100k"     = @{ Name="Going Viral";                Desc="Reach 100,000 viewers.";                               ViewerBonus=50000;  BoxReward="silver";    Threshold=100000; Stat="ViewerPeak" }
+    "subscriber_1m"    = @{ Name="One Million";                Desc="Reach 1,000,000 viewers.";                             ViewerBonus=0;      BoxReward="celestial"; Threshold=1000000;Stat="ViewerPeak" }
+    # LEVELING
+    "reach_level5"     = @{ Name="Warming Up";                 Desc="Reach level 5.";                                       ViewerBonus=25000;  BoxReward="bronze" }
+    "reach_level10"    = @{ Name="Seasoned Crawler";           Desc="Reach level 10.";                                      ViewerBonus=75000;  BoxReward="silver" }
 }
 
 # ============================================================
@@ -1236,7 +1262,7 @@ $script:RoomDB = @{
     "f1_tutorial_guild" = @{
         Name="Tutorial Guild Hall - Entry"; Floor=1; Visited=$false; IsSafeRoom=$true; IsTutorial=$true
         Desc="The building materialized out of nothing. One second it wasn't here; the next it was, perfectly intact -- warm stone, good light, and the smell of something that might be bread. A ratkin about four feet tall in a guild vest stands behind a reception desk. His whiskers are twitching. His eyes are very large. His name, a small sign informs you, is MORDECAI. He looks up. He looks like he has been waiting for you. He has, in a sense."
-        Exits=@{south="f1_spawn"}
+        Exits=@{south="f1_spawn";north="f1_guild"}
         Items=@("mordecai_scroll"); Enemies=@()
         Interactables=@{
             "sign"     = @{ Name="Guild Notice Board"; Desc="Covered in laminated notices in seventeen languages. One says: LOOT BOXES: SAFE ROOMS ONLY. Another says: RESTING: SAFE ROOMS ONLY. A third says: MORDECAI IS NOT YOUR ENEMY. A fourth says: YES HE KNOWS ABOUT THE FEET THING."; Outcome="none" }
@@ -1248,7 +1274,7 @@ $script:RoomDB = @{
     "f1_spawn" = @{
         Name="Spawn Point Alpha"; Floor=1; Visited=$false
         Desc="The world ended about three minutes ago. You're standing in what used to be a Seattle neighborhood. The buildings have all sunk into the ground, leaving a rubble-strewn dungeon floor stretching in every direction. Overhead, glowing text hangs in the air: WELCOME, CRAWLER. FIND THE STAIRCASE. A Tutorial Guild Hall is to the north. There's a vending machine area to the east."
-        Exits=@{north="f1_guild";east="f1_vending";south="f1_rubble_south";west="f1_alley"}
+        Exits=@{north="f1_tutorial_guild";east="f1_vending";south="f1_rubble_south";west="f1_alley"}
         Items=@("pipe_wrench","health_potion"); Enemies=@("cave_crawler")
         Interactables=@{
             "rubble"    = @{ Name="Collapsed Concrete"; Desc="Heavy slabs of what used to be a building. Could hide anything."; Outcome="loot"; Item="scrap_metal"; Text="You dig through the rubble and find a length of useful scrap metal." }
@@ -1329,7 +1355,7 @@ $script:RoomDB = @{
         Chest=@{Locked=$true;Items=@("combat_knife","riot_gear");Gold=35;KeyRequired="lockpick"}
         Interactables=@{
             "car"    = @{ Name="Crushed Sedan"; Desc="A blue sedan, flattened almost completely. The door panel is loose."; Outcome="loot"; Item="scrap_metal"; Text="You pry off the door panel and strip some useful metal. Scrap metal added to inventory." }
-            "britta" = @{ Name="Britta (Injured Crawler)"; Desc="A woman in her thirties, left arm at a bad angle, hiding behind the pickup truck. She has a first aid kit she can't reach with one hand and a determined expression that suggests she's been through worse than a broken arm and is furious about this specific instance."; Outcome="dialogue"; DialogueId="britta_parking" }
+            "britta" = @{ Name="Britta Sorensen"; Desc="A woman in her thirties, hiding behind the pickup truck. Left arm splinted with duct tape. She looks like someone who has decided to survive."; Outcome="dialogue"; DialogueId="britta_parking" }
             "truck"  = @{ Name="Crushed Pickup Truck"; Desc="Provides solid cover against ranged attacks. The truck bed still has a toolbox."; Outcome="loot"; Item="duct_tape"; Text="The toolbox in the truck bed has a roll of duct tape. Practical find." }
         }
         Ambient=@("Britta: 'My name is Britta. If I give you my stuff will you help me?'","A car alarm still bleating somewhere in the wreckage.","Feral dogs circle in the upper level, watching.")
@@ -2049,8 +2075,17 @@ $script:DialogueDB["britta_parking"] = @{
            Response="'I've got a first aid kit, some antiparasitic, and a scrap metal piece I found.' She doesn't sound offended by the question. 'Pragmatic. Fine. I'll trade the antiparasitic for help getting upright and past those dogs.' She holds out her good hand." }
         @{ Text="Sorry, I can't stop."; Outcome="neutral"; GoldCost=0;
            Response="She nods once. No judgment in it. 'Understood. Hey -- the dogs on the upper level change positions every few minutes. There's a gap to the north around every third cycle.' She's already looking at her kit, figuring out the one-handed version. 'Good luck.'" }
-        @{ Text="I'll deal with the dogs."; Outcome="combat"; StartsConflict=$false;
+        @{ Text="I'll deal with the dogs."; Outcome="britta_dogs"; StartsConflict=$false;
            Response="'I was hoping you'd say that.' She leans back against the truck. 'I'll be here. Being medically unimpressed with my current situation.' You go deal with the dogs." }
+    )
+}
+$script:DialogueDB["britta_helped"] = @{
+    Greeting = "Britta looks up. Her arm is still splinted but she's moved to a more defensible position behind the truck. 'You're back,' she says. 'I counted your kills from the sound. Thorough.' She shifts position carefully. 'I've got a route mapped to the market. I can make it if the corridor is clear. I don't suppose you're heading that way?'"
+    Options = @(
+        @{ Text="I'll walk you there."; Outcome="neutral"; Response="'I knew I picked the right crawler to trust.' She stands carefully, keeping weight off the arm. You walk her to the market. It's less heroic than it sounds -- mostly just staying between her and anything that moves. She makes it." }
+        @{ Text="I'm heading a different way."; Outcome="neutral"; Response="'Fair enough.' She hands you a scrap of paper with rough directions. 'Market's north. Stay left past the vending machines. And watch the corners -- the goblins that survived you are going to be nervous.' A pause. 'Nervous goblins explode.'" }
+        @{ Text="What do you know about Floor 2?"; Outcome="neutral"; Response="'Sewer system. At least that's what I'm hearing from crawlers coming back up.' She frowns. 'Nobody's coming back up anymore. That's new. That's a change from an hour ago.' She looks at you seriously. 'Whatever's down there, it's not letting people run.'" }
+        @{ Text="Stay safe, Britta."; Outcome="neutral"; Response="'I'm a nurse in a dungeon with a broken arm,' she says. 'Safe is a word I've temporarily deprioritized.' She almost smiles. 'But thank you. Really.'" }
     )
 }
 
@@ -2076,7 +2111,7 @@ function New-GameState {
     $con = $stats["CON"]; $cha = $stats["CHA"]; $lck = $stats["LCK"]
     $maxHP = 80 + ($con * 5); $maxMP = $int
     $script:GS = [ordered]@{
-        PlayerName="$Name"; Floor=1; CurrentRoom="f1_tutorial_guild"
+        PlayerName="$Name"; Floor=1; CurrentRoom="f1_spawn"
         HP=$maxHP; MaxHP=$maxHP; MP=$maxMP; MaxMP=$maxMP
         STR=$str; DEX=$dex; INT=$int; CON=$con; CHA=$cha; LCK=$lck
         EXP=0; EXPNext=100; Level=1; Gold=15
@@ -2086,6 +2121,7 @@ function New-GameState {
         Kills=0; RoomsVisited=0; StepsThisFloor=0
         InCombat=$false; CurrentEnemy=$null; EnemyHP=0; EnemyMaxHP=0
         CombatRound=0; PlayerHiding=$false; DistractActive=$false
+        SpellStunActive=$false; SpellSlowActive=$false
         InDialogue=$false; DialogueId=$null; CurrentNPCEnemy=$null
         TutorialComplete=$false; TutorialStep=0
         QuestLog=@(); CompletedQuests=@()
@@ -2093,12 +2129,18 @@ function New-GameState {
         AchieveStat_talk_escapes=0; AchieveStat_interact_count=0; AchieveStat_mordecai_talks=0
         AchieveStat_boss_kills=0; AchieveStat_rooms_explored=0; AchieveStat_gold_spent=0
         AchieveStat_items_crafted=0; AchieveStat_floors_cleared=0
+        AchieveStat_goblin_kills=0; AchieveStat_flee_count=0; AchieveStat_stealth_count=0
+        AchieveStat_rooms_searched=0; AchieveStat_boxes_opened=0
+        KnownSpells=@("bolt")
         StatusEffects=@{}
         GameFlags=@{ RefusedDungeon=$false; BrittaHelped=$false; MordecaiTrusted=$false }
         Turn=1; LastSystemMsg=0
     }
     # Initialize achievement tracking
     foreach ($key in $script:AchievementDB.Keys) { $script:GS.Achievements[$key] = $false }
+    # Starting spells based on INT
+    if ($script:GS.INT -ge 5) { $script:GS.KnownSpells += @("frost_shard") }
+    if ($script:GS.INT -ge 7) { $script:GS.KnownSpells += @("fireball") }
 }
 
 function Recalculate-DerivedStats {
@@ -2351,6 +2393,7 @@ function Add-Viewers {
 function Lose-Viewers {
     param([int]$Amount=5)
     $script:GS.Viewers = [Math]::Max(0, $script:GS.Viewers - $Amount)
+    if ($script:GS -and $script:GS.Viewers -lt 50) { Grant-Achievement "boring_crawler" }
 }
 
 function Check-SponsorDrop {
@@ -2366,7 +2409,7 @@ function Check-SponsorDrop {
 # ============================================================
 function Grant-Achievement {
     param([string]$Id)
-    if ($script:GS.Achievements[$Id]) { return }   # already unlocked
+    if ($script:GS.Achievements[$Id] -eq $true) { return }   # already unlocked
     $def = $script:AchievementDB[$Id]
     if (-not $def) { return }
     $script:GS.Achievements[$Id] = $true
@@ -2378,14 +2421,17 @@ function Grant-Achievement {
 
 function Check-Achievement {
     param([string]$Id)
-    if ($script:GS.Achievements[$Id]) { return }
+    if ($script:GS.Achievements[$Id] -eq $true) { return }
     $def = $script:AchievementDB[$Id]
     if (-not $def) { return }
     # Achievements without a Stat+Threshold must be granted manually via Grant-Achievement
     if (-not ($def.Threshold -and $def.Stat)) { return }
+    # Resolve stat: try AchieveStat_ prefix first, then raw GS key
     $statKey = "AchieveStat_$($def.Stat)"
-    $statVal = $script:GS[$statKey]
-    if ($statVal -lt $def.Threshold) { return }
+    $statVal = if ($null -ne $script:GS[$statKey]) { $script:GS[$statKey] } `
+               elseif ($null -ne $script:GS[$def.Stat]) { $script:GS[$def.Stat] } `
+               else { 0 }
+    if ([int]$statVal -lt [int]$def.Threshold) { return }
     Grant-Achievement $Id
 }
 
@@ -2403,9 +2449,9 @@ function Do-Achievements {
     foreach ($ach in $script:GS.PendingAchievements) {
         Write-Loot " * $($ach.Name)"
         Write-Terminal "   $($ach.Desc)" "#A0A0A0"
-        if ($ach.LootBox) {
+        if ($ach.BoxReward) {
             $script:GS.LootBoxes++
-            Write-Loot "   + 1 Loot Box added to your inventory."
+            Write-Loot "   + 1 $($ach.BoxReward) loot box added to your collection."
         }
     }
     $script:GS.PendingAchievements = @()
@@ -2461,6 +2507,8 @@ function Do-OpenBox {
         return
     }
     $script:GS.LootBoxes--
+    $script:GS.AchieveStat_boxes_opened++
+    if ($script:GS.AchieveStat_boxes_opened -eq 1) { Grant-Achievement "first_box" }
     Write-Terminal "> Opening loot box..." "#BF5AF2"
     Open-LootBox
 }
@@ -2613,17 +2661,55 @@ function Do-Attack {
 }
 
 function Do-CastSpell {
+    param([string]$SpellId = "")
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "Not in combat."; return }
-    if ($g.MP -lt 2) { Write-Warn "Not enough MP! (need 2 MP)"; return }
+    if (-not $g.KnownSpells -or $g.KnownSpells.Count -eq 0) { Write-Warn "You don't know any spells."; return }
+
+    # If no spell specified, open picker
+    if (-not $SpellId) {
+        $ownerWin = $script:CombatWindowRef
+        $SpellId = Show-SpellPicker $ownerWin
+        if (-not $SpellId) { return }   # cancelled
+    }
+
+    $spell = $script:SpellDB[$SpellId]
+    if (-not $spell) { Write-Warn "Unknown spell."; return }
+    if ($g.MP -lt $spell.Cost) { Write-Warn "Not enough MP! ($($spell.Name) costs $($spell.Cost) MP)"; return }
+
     $edef = $script:EnemyDB[$g.CurrentEnemy]
-    $g.MP -= 2
-    $roll = Get-Random -Minimum 1 -Maximum 7
-    $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
-    $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
-    $g.EnemyHP -= $dmg
-    Write-Combat "Spell! You blast $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
-    if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+    $g.MP -= $spell.Cost
+
+    switch ($spell.Type) {
+        "damage" {
+            $roll     = Get-Random -Minimum 1 -Maximum 7
+            $enemyDef = if ($edef.Defense) { $edef.Defense } else { 0 }
+            if ($spell.ArmorPen) { $enemyDef = [Math]::Floor($enemyDef / 2) }
+            $dmg = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
+            $g.EnemyHP -= $dmg
+            Write-Combat "$($spell.Name)! You hit $($edef.Name) for $dmg magic damage!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
+            if ($spell.Effect -eq "slow")  { $script:GS.SpellSlowActive  = $true; Write-Info "$($edef.Name) is slowed!" }
+            if ($spell.Effect -eq "stun" -and (Get-Random -Minimum 1 -Maximum 101) -le 30) {
+                $script:GS.SpellStunActive = $true; Write-Info "$($edef.Name) is stunned and will skip their next attack!"
+            }
+            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+        }
+        "leech" {
+            $roll     = Get-Random -Minimum 1 -Maximum 7
+            $enemyDef = if ($edef.Defense) { [Math]::Floor($edef.Defense / 2) } else { 0 }
+            $dmg  = [Math]::Max(1, ($g.INT * 2) + $roll - $enemyDef)
+            $heal = [Math]::Max(1, [Math]::Floor($dmg / 2))
+            $g.EnemyHP -= $dmg
+            $g.HP = [Math]::Min($g.MaxHP, $g.HP + $heal)
+            Write-Combat "Life Leech! You drain $dmg HP from $($edef.Name) and restore $heal HP!  ($($g.EnemyHP)/$($g.EnemyMaxHP) HP)"
+            if ($g.EnemyHP -le 0) { Resolve-CombatVictory; return }
+        }
+        "heal" {
+            $healAmt = $g.INT * 3
+            $g.HP = [Math]::Min($g.MaxHP, $g.HP + $healAmt)
+            Write-Loot "Mend! You restore $healAmt HP. ($($g.HP)/$($g.MaxHP))"
+        }
+    }
     Enemy-Attack
 }
 
@@ -2632,6 +2718,17 @@ function Enemy-Attack {
     $edef = $script:EnemyDB[$g.CurrentEnemy]
     if (-not $edef) { return }
 
+    # Spell stun check (stun skips enemy turn entirely)
+    if ($g.SpellStunActive) {
+        Write-Info "$($edef.Name) is stunned and cannot act!"
+        $g.SpellStunActive = $false
+        $g.CombatRound++
+        Update-CombatWindow; Update-HUD
+        return
+    }
+    # Spell slow (reduces enemy attack)
+    $slowPenalty = 0
+    if ($g.SpellSlowActive) { $slowPenalty = 2; $g.SpellSlowActive = $false; Write-Info "$($edef.Name)'s movement is sluggish." }
     # Distract dodge chance
     if ($g.DistractActive) {
         if ((Get-Random -Minimum 1 -Maximum 101) -le 40) {
@@ -2656,7 +2753,7 @@ function Enemy-Attack {
     }
 
     $eAtk  = if ($edef.Attack)  { $edef.Attack  } else { 3 }
-    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense))
+    $eDmg = [Math]::Max(0, $eAtk + (Get-Random -Minimum -2 -Maximum 3) - (Get-TotalDefense) - $slowPenalty)
     $g.HP -= $eDmg
     Write-Combat "$($edef.Name) hits you for $eDmg damage! HP: $($g.HP)/$($g.MaxHP)"
     if ($g.HP -le 0) { Resolve-CombatDeath; return }
@@ -2696,6 +2793,7 @@ function Do-Distract {
 function Do-Flee {
     $g = $script:GS
     if (-not $g.InCombat) { Write-Warn "You're not in combat."; return }
+    $g.AchieveStat_flee_count++
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.DEX
     if ($roll -ge 13) {
         $edef = $script:EnemyDB[$g.CurrentEnemy]
@@ -2723,7 +2821,13 @@ function Resolve-CombatVictory {
     $goldBase = if ($edef.Gold -is [array]) { Get-Random -Minimum $edef.Gold[0] -Maximum ($edef.Gold[1]+1) } else { if($edef.Gold){$edef.Gold}else{3} }
     $goldGain = $goldBase + (Get-Random -Minimum 0 -Maximum 6)
     $g.EXP += $expGain; $g.Gold += $goldGain; $g.Kills++
-    $g.AchieveStat_boss_kills += if ($edef.IsBoss) { 1 } else { 0 }
+    if ($edef.Type -eq "goblin") { $g.AchieveStat_goblin_kills++ }
+    if ($edef.IsBoss) {
+        $g.AchieveStat_boss_kills++
+        if ($g.AchieveStat_boss_kills -eq 1) { Grant-Achievement "boss_slayer" }
+    }
+    if ($g.Kills -eq 1) { Grant-Achievement "first_blood" }
+    if ($g.HP -le 5 -and $g.HP -gt 0) { Grant-Achievement "survive_low_hp" }
     $script:CombatSummaryText = "$($edef.Name) defeated!`n+$expGain EXP   +$goldGain gold"
     Write-Loot "=== VICTORY! ==="
     Write-Loot "$($edef.Name) defeated!  +$expGain EXP  +$goldGain gold"
@@ -2749,6 +2853,15 @@ function Resolve-CombatVictory {
     $room = $script:RoomDB[$g.CurrentRoom]
     if ($room.Enemies) { $room.Enemies = $room.Enemies | Where-Object { $_ -ne $g.CurrentEnemy } }
     if ($room.BossRoom) { $room.BossDefeated = $true }
+    # Britta quest: dogs cleared
+    if ($g.GameFlags["BrittaWaitingDogs"] -and $g.CurrentRoom -eq "f1_parking_garage" -and $room.Enemies.Count -eq 0) {
+        $g.GameFlags["BrittaWaitingDogs"] = $false
+        $g.GameFlags["BrittaHelped"] = $true
+        $g.Inventory += @("health_potion")
+        Write-Loot "You cleared the dogs. Britta waves you over. 'Here -- from the kit. You earned it.' She hands you a health potion."
+        Write-Info "Britta: 'I've got a plan. Not a good one. But a plan. Talk to me again when things settle.'"
+        Grant-Achievement "helped_britta"
+    }
     $g.InCombat = $false; $g.CurrentEnemy = $null; $g.EnemyHP = 0
     $g.PlayerHiding = $false; $g.DistractActive = $false
     Check-LevelUp
@@ -2785,6 +2898,14 @@ function Check-LevelUp {
     Write-Info "+10 Max HP | +1 $statToGain"
     $g.LootBoxes++
     Write-Loot "You receive a Loot Box for leveling up!"
+    # Spell unlocks
+    if ($g.Level -eq 3 -and "static_bolt" -notin $g.KnownSpells) { $g.KnownSpells += @("static_bolt"); Write-Loot "New spell unlocked: Static Bolt!" }
+    if ($g.Level -eq 5 -and "fireball"    -notin $g.KnownSpells) { $g.KnownSpells += @("fireball");    Write-Loot "New spell unlocked: Fireball!" }
+    if ($g.Level -eq 7 -and "life_leech"  -notin $g.KnownSpells) { $g.KnownSpells += @("life_leech");  Write-Loot "New spell unlocked: Life Leech!" }
+    if ($g.Level -eq 10 -and "mend"       -notin $g.KnownSpells) { $g.KnownSpells += @("mend");        Write-Loot "New spell unlocked: Mend!" }
+    # Level achievements
+    if ($g.Level -eq 5)  { Grant-Achievement "reach_level5" }
+    if ($g.Level -eq 10) { Grant-Achievement "reach_level10" }
     Update-HUD
 }
 
@@ -2795,6 +2916,18 @@ function Trigger-Victory {
     Write-System "Final report: $($script:GS.Level) levels | $($script:GS.Kills) kills | $($script:GS.RoomsVisited) rooms | $($script:GS.ViewerPeak) peak viewers"
 }
 
+
+# ============================================================
+# SPELL DATABASE
+# ============================================================
+$script:SpellDB = @{
+    "bolt"         = @{ Name="Magic Bolt";    Cost=2; Desc="Focused arcane energy. Damage scales with INT.";             Type="damage" }
+    "frost_shard"  = @{ Name="Frost Shard";   Cost=2; Desc="Ice spike. Slows enemy (reduces their attack by 2 next hit)."; Type="damage"; Effect="slow" }
+    "static_bolt"  = @{ Name="Static Bolt";   Cost=2; Desc="Lightning. 30% chance to stun enemy (they skip their attack)."; Type="damage"; Effect="stun" }
+    "fireball"     = @{ Name="Fireball";      Cost=3; Desc="Explosion. Ignores 50% of enemy armor.";                    Type="damage"; ArmorPen=$true }
+    "life_leech"   = @{ Name="Life Leech";    Cost=3; Desc="Drain life from the enemy. You heal for half damage dealt."; Type="leech" }
+    "mend"         = @{ Name="Mend";          Cost=3; Desc="Restore HP equal to INT x 3. Cannot be used offensively.";  Type="heal" }
+}
 
 # ============================================================
 # COMBAT WINDOW (FF-style popup)
@@ -2852,6 +2985,69 @@ function Show-CombatEndScreen {
         } else { $ctrl.lblCEndLevel.Text = "" }
     }
     $ctrl.panelEnd.Visibility = "Visible"
+}
+
+function Show-SpellPicker {
+    param([object]$OwnerWin)
+    $g = $script:GS
+    if (-not $g.KnownSpells -or $g.KnownSpells.Count -eq 0) { Write-Warn "You don't know any spells."; return $null }
+    $spellXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cast Spell" Width="360" Height="320"
+        WindowStyle="None" Background="#0F0818"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <Border BorderBrush="#5E3A8C" BorderThickness="1" Padding="14">
+        <StackPanel>
+            <TextBlock Text="CAST SPELL" Foreground="#BF5AF2" FontFamily="Consolas"
+                       FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+            <ListBox x:Name="lstSpells" Background="#0A0010" Foreground="#E0D0FF"
+                     FontFamily="Consolas" FontSize="12" Height="140"
+                     BorderBrush="#333" BorderThickness="1"/>
+            <TextBlock x:Name="lblSpellDesc" Text="" Foreground="#8E8E93" FontFamily="Consolas"
+                       FontSize="10" TextWrapping="Wrap" Margin="0,6,0,6" Height="50"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnCast"   Content="CAST"   Width="80" Margin="4,0" Padding="8,5"
+                        Background="#5E3A8C" Foreground="#E0D0FF" FontFamily="Consolas" FontWeight="Bold"/>
+                <Button x:Name="btnCancel" Content="CANCEL" Width="80" Margin="4,0" Padding="8,5"
+                        Background="#2A2A2E" Foreground="#E8E8E8" FontFamily="Consolas"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
+"@
+    try { $sw = [Windows.Markup.XamlReader]::Parse($spellXaml) } catch { return $null }
+    $sw.Owner  = $OwnerWin
+    $lst       = $sw.FindName("lstSpells")
+    $lblD      = $sw.FindName("lblSpellDesc")
+    $btnCast   = $sw.FindName("btnCast")
+    $btnCancel = $sw.FindName("btnCancel")
+    $spellIds  = @($g.KnownSpells)
+
+    foreach ($sid in $spellIds) {
+        $sp = $script:SpellDB[$sid]
+        if (-not $sp) { continue }
+        $mpColor = if ($g.MP -ge $sp.Cost) { "" } else { "  [NOT ENOUGH MP]" }
+        [void]$lst.Items.Add("$($sp.Name)  ($($sp.Cost) MP)$mpColor")
+    }
+    $lst.Add_SelectionChanged({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $spellIds.Count) {
+            $sp = $script:SpellDB[$spellIds[$idx]]
+            $lblD.Text = if ($sp -and $sp.Desc) { $sp.Desc } else { "" }
+        }
+    })
+    $btnCast.Add_Click({
+        $idx = $lst.SelectedIndex
+        if ($idx -ge 0 -and $idx -lt $spellIds.Count) {
+            $sp = $script:SpellDB[$spellIds[$idx]]
+            if ($sp -and $g.MP -lt $sp.Cost) { $lblD.Text = "Not enough MP!"; return }
+            $sw.Tag = $spellIds[$idx]; $sw.Close()
+        }
+    })
+    $btnCancel.Add_Click({ $sw.Tag = $null; $sw.Close() })
+    $sw.ShowDialog() | Out-Null
+    return $sw.Tag
 }
 
 function Show-CombatItemPicker {
@@ -3190,6 +3386,8 @@ function Show-CombatWindow {
 function Start-Dialogue {
     param([string]$DialogueId, [string]$SpeakerName=$null)
     $g = $script:GS
+    # Britta post-help dialogue swap
+    if ($DialogueId -eq "britta_parking" -and $g.GameFlags["BrittaHelped"]) { $DialogueId = "britta_helped" }
     $dlg = $script:DialogueDB[$DialogueId]
     if (-not $dlg) { Write-Warn "No dialogue found for: $DialogueId"; return }
 
@@ -3274,6 +3472,13 @@ function Do-Reply {
                     Start-Combat $room.Enemies[0]
                 }
             }
+        }
+        "britta_dogs" {
+            $g.GameFlags["BrittaWaitingDogs"] = $true
+            End-Dialogue
+            Write-Info "The feral dogs are circling nearby. Type ATTACK or click [ATTACK] to fight them."
+            $room = $script:RoomDB[$g.CurrentRoom]
+            if ($room.Enemies -and $room.Enemies.Count -gt 0) { Start-Combat $room.Enemies[0] }
         }
         default   { End-Dialogue }
     }
@@ -3431,6 +3636,7 @@ function Do-Hide {
     $roll = (Get-Random -Minimum 1 -Maximum 21) + $g.DEX
     if ($roll -ge 12) {
         $g.PlayerHiding = $true
+        $g.AchieveStat_stealth_count++
         Write-Info "You slip into the shadows. Enemies are less likely to hit you."
     } else {
         Write-Warn "Nowhere good to hide here. You settle for standing very still."
@@ -3607,12 +3813,16 @@ function Do-Search {
     $room = $script:RoomDB[$g.CurrentRoom]
 
     # Mark searched so Do-Look and Do-TakeAll can see items
+    if (-not $room.Searched) { $g.AchieveStat_rooms_searched++ }
     $room.Searched = $true
 
-    # Reveal any items the room designer placed here
+    # Add any room items directly to inventory
     if ($room.Items -and $room.Items.Count -gt 0) {
-        $itemNames = $room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } }
+        $itemNames = @($room.Items | ForEach-Object { $i = $script:ItemDB[$_]; if ($i -and $i.Name) { $i.Name } else { $_ } })
         Write-Loot "You find: $($itemNames -join ', ')"
+        foreach ($id in $room.Items) { $g.Inventory += @($id) }
+        $room.Items = @()
+        if ($g.Inventory.Count -ge 15) { Grant-Achievement "hoarder" }
     }
 
     # Random search bonus (gold / loot box)
@@ -4128,16 +4338,16 @@ function Show-InventoryWindow {
 
       <!-- Title bar -->
       <Border x:Name="invDragBar" Grid.Row="0" Background="#111115" Padding="16,10" Cursor="SizeAll">
-        <DockPanel>
-          <TextBlock Text="INVENTORY" Foreground="#E8E8E8" FontFamily="Consolas"
-                     FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock x:Name="lblInvGold" Text="" Foreground="#FFCC00" FontFamily="Consolas"
-                     FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
-          <TextBlock x:Name="lblInvBoxes" Text="" Foreground="#BF5AF2" FontFamily="Consolas"
-                     FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
+        <DockPanel LastChildFill="True">
           <Button x:Name="btnInvClose" Content="X  CLOSE" DockPanel.Dock="Right"
                   Background="#2A0808" Foreground="#FF453A" BorderBrush="#FF3B30"
-                  Padding="12,6" FontSize="11"/>
+                  Padding="10,5" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+          <TextBlock Text="INVENTORY" Foreground="#E8E8E8" FontFamily="Consolas"
+                     FontSize="14" FontWeight="Bold" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+          <TextBlock x:Name="lblInvGold" Text="" Foreground="#FFCC00" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0" DockPanel.Dock="Left"/>
+          <TextBlock x:Name="lblInvBoxes" Text="" Foreground="#BF5AF2" FontFamily="Consolas"
+                     FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </DockPanel>
       </Border>
 
@@ -4522,6 +4732,7 @@ function Show-InventoryWindow {
         $lbi = $lstItems.SelectedItem
         if ($lbi -and $lbi.Tag) {
             Invoke-UseItem $lbi.Tag
+            Grant-Achievement "first_equip"
             Update-HUD
             &$refreshHeader
             &$refreshList
@@ -4627,6 +4838,7 @@ function Show-InventoryWindow {
         }
         $g.Inventory += @($recipe.Result)
         $g.AchieveStat_items_crafted++
+        if ($g.AchieveStat_items_crafted -eq 1) { Grant-Achievement "first_craft" }
         $resultItem = $script:ItemDB[$recipe.Result]
         Write-Loot "Crafted: $(if($resultItem){$resultItem.Name}else{$recipe.Result})!"
         if ($g.AchieveStat_items_crafted -eq 1 -and $recipe.Result -eq "jugs_o_boom") { Grant-Achievement "jug_o_boom" }
