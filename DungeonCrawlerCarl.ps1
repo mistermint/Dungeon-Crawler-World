@@ -2572,12 +2572,50 @@ function Get-RoomItems {
     return $room.Items | Where-Object { $_ }
 }
 
+function Roll-Encounter {
+    param([int]$Floor = 1)
+    $floorKey = $Floor.ToString()
+    $groups = if ($script:EncounterGroups -and $script:EncounterGroups[$floorKey]) {
+        @($script:EncounterGroups[$floorKey])
+    } else { return @() }
+
+    # Weighted random pick
+    $totalWeight = ($groups | ForEach-Object { [int]$_.Weight } | Measure-Object -Sum).Sum
+    if ($totalWeight -le 0) { return @() }
+    $roll = Get-Random -Minimum 1 -Maximum ($totalWeight + 1)
+    $cumulative = 0
+    $chosen = $groups[-1]
+    foreach ($grp in $groups) {
+        $cumulative += [int]$grp.Weight
+        if ($roll -le $cumulative) { $chosen = $grp; break }
+    }
+
+    # Build enemy ID list from Members
+    $ids = @()
+    foreach ($member in $chosen.Members) {
+        $count = Get-Random -Minimum ([int]$member.Min) -Maximum ([int]$member.Max + 1)
+        for ($i = 0; $i -lt $count; $i++) { $ids += $member.Id }
+    }
+    return $ids
+}
+
 function Get-RoomEnemies {
     param([string]$RoomId)
     $room = $script:RoomDB[$RoomId]
     if (-not $room) { return @() }
     if ($room.BossRoom -and -not $room.BossDefeated) { return @($room.BossEnemy) }
-    return $room.Enemies | Where-Object { $_ }
+    if ($room.Enemies -and $room.Enemies.Count -gt 0) { return @($room.Enemies | Where-Object { $_ }) }
+    # Safe rooms and named story rooms never get random encounters
+    if ($room.IsSafeRoom -or $room.NoEncounter) { return @() }
+    # Roll a random encounter for combat-tagged rooms on first entry
+    if ($room.CombatRoom -and -not $room.Visited) {
+        $ids = Roll-Encounter $script:GS.Floor
+        if ($ids.Count -gt 0) {
+            $room.Enemies = $ids
+            return $ids
+        }
+    }
+    return @()
 }
 
 function Enter-Room {
@@ -3629,7 +3667,7 @@ function Do-Reply {
             elseif ($g.CurrentRoom) {
                 $room = $script:RoomDB[$g.CurrentRoom]
                 if ($room.Enemies -and $room.Enemies.Count -gt 0) {
-                    Start-Combat $room.Enemies[0]
+                    Start-Combat @($room.Enemies)
                 }
             }
         }
@@ -3638,7 +3676,7 @@ function Do-Reply {
             End-Dialogue
             Write-Info "The feral dogs are circling nearby. Type ATTACK or click [ATTACK] to fight them."
             $room = $script:RoomDB[$g.CurrentRoom]
-            if ($room.Enemies -and $room.Enemies.Count -gt 0) { Start-Combat $room.Enemies[0] }
+            if ($room.Enemies -and $room.Enemies.Count -gt 0) { Start-Combat @($room.Enemies) }
         }
         default   { End-Dialogue }
     }
