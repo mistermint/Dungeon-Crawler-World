@@ -316,6 +316,7 @@ $xaml = @"
                             <Button x:Name="btnReply2" Content="[2]" Style="{StaticResource DBtn}" Foreground="#30D158" Margin="2,1" Visibility="Collapsed"/>
                             <Button x:Name="btnReply3" Content="[3]" Style="{StaticResource DBtn}" Foreground="#30D158" Margin="2,1" Visibility="Collapsed"/>
                             <Button x:Name="btnReply4" Content="[4]" Style="{StaticResource DBtn}" Foreground="#30D158" Margin="2,1" Visibility="Collapsed"/>
+                            <Button x:Name="btnReplyLeave" Content="[LEAVE]" Style="{StaticResource DBtn}" Foreground="#FF9F0A" Margin="2,1" Visibility="Collapsed"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -3601,7 +3602,7 @@ function Start-Dialogue {
     for ($i = 0; $i -lt $opts.Count; $i++) {
         Write-Terminal "  [$($i+1)] $($opts[$i].Text)" "#E8E8E8"
     }
-    Write-Info "(Type REPLY 1-$($opts.Count) to respond)"
+    Write-Info "(Type REPLY 1-$($opts.Count) to respond, or LEAVE to exit)"
 
     # Show dialogue bar in UI
     $script:Window.Dispatcher.Invoke([Action]{
@@ -3620,6 +3621,8 @@ function Start-Dialogue {
                 }
             }
         }
+        $leaveBtn = $script:Window.FindName("btnReplyLeave")
+        if ($leaveBtn) { $leaveBtn.Visibility = "Visible" }
     })
 }
 
@@ -3697,6 +3700,8 @@ function End-Dialogue {
             $btn = $script:Window.FindName("btnReply$i")
             if ($btn) { $btn.Visibility = "Collapsed" }
         }
+        $leaveBtn = $script:Window.FindName("btnReplyLeave")
+        if ($leaveBtn) { $leaveBtn.Visibility = "Collapsed" }
     })
 }
 
@@ -4133,6 +4138,7 @@ function Load-Game {
         # Re-hydrate arrays that JSON flattens
         if ($script:GS.Inventory -isnot [array]) { $script:GS.Inventory = @($script:GS.Inventory) }
         if ($script:GS.PendingAchievements -isnot [array]) { $script:GS.PendingAchievements = @() }
+        $script:GS.PendingAchievements = @()   # never carry pending achievements across sessions
         Enter-Room $script:GS.CurrentRoom
         Write-Info "Game loaded."
         return $true
@@ -5057,13 +5063,16 @@ function Invoke-GameCommand {
     $cmd = $Raw.Trim().ToLower()
     if ($cmd -eq "") { return }
 
-    # In-dialogue: only REPLY commands matter
+    # In-dialogue: REPLY, number, or LEAVE/BYE/EXIT to end
     if ($g.InDialogue) {
         if ($cmd -match "^reply\s+(\d)$" -or $cmd -match "^(\d)$") {
             $num = [int]($Matches[1])
             Do-Reply $num
+        } elseif ($cmd -in @("leave","bye","goodbye","exit","quit","done","end","escape","l")) {
+            Write-Info "You end the conversation."
+            End-Dialogue
         } else {
-            Write-Warn "You're mid-conversation. Type REPLY 1-4 to respond, or a number."
+            Write-Warn "Type 1-4 to reply, or LEAVE to end the conversation."
         }
         return
     }
@@ -5507,6 +5516,8 @@ for ($i = 1; $i -le 4; $i++) {
     $btn = $script:Window.FindName("btnReply$idx")
     if ($btn) { $btn.Add_Click([ScriptBlock]::Create("Do-Reply $idx")) }
 }
+$btnReplyLeave = $script:Window.FindName("btnReplyLeave")
+if ($btnReplyLeave) { $btnReplyLeave.Add_Click({ Write-Info "You end the conversation."; End-Dialogue }) }
 
 # ---- Splash / New Game button ----
 $btnNewGame = $script:Window.FindName("btnNewGame")
